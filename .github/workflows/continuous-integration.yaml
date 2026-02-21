@@ -15,35 +15,35 @@ jobs:
     strategy:
       matrix:
         include:
-          - tf-version: 1.6.0
+          - tofu-version: 1.6.0
             chroot-directory: test-fixtures/fmt-passed
             status-code: '0'
-          - tf-version: 1.6.0
+          - tofu-version: 1.6.0
             chroot-directory: test-fixtures/fmt-failed
             status-code: '3'
-          - tf-version: 1.7.0
+          - tofu-version: 1.7.0
             chroot-directory: test-fixtures/fmt-passed
             status-code: '0'
-          - tf-version: 1.7.0
+          - tofu-version: 1.7.0
             chroot-directory: test-fixtures/fmt-failed
             status-code: '3'
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v6
 
-      - name: Run tf-setup
+      - name: Run tofu setup
         uses: ./src/tf-setup
         with:
-          tf-version: ${{ matrix.tf-version }}
+          tofu-version: ${{ matrix.tofu-version }}
 
-      - name: Run tf-fmt
+      - name: Run tofu fmt
         id: tf-fmt
         uses: ./src/tf-fmt
         continue-on-error: true
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
 
-      - name: Assert tf-fmt status code
+      - name: Assert tofu fmt status code
         if: steps.tf-fmt.outputs.status-code != matrix.status-code
         run: exit 1
 
@@ -51,47 +51,47 @@ jobs:
     runs-on: ubuntu-slim
     strategy:
       matrix:
-        tf-version:
+        tofu-version:
           - 1.6.0
           - 1.7.0
         include:
-          - tf-version: 1.6.0
+          - tofu-version: 1.6.0
             upload-artifact: 'true'
             tofu-apply: 'false'
-          - tf-version: 1.7.0
+          - tofu-version: 1.7.0
             upload-artifact: 'false'
             tofu-apply: 'true'
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v6
 
-      - name: Run tf-setup
+      - name: Run tofu setup
         uses: ./src/tf-setup
         with:
-          tf-version: ${{ matrix.tf-version }}
+          tofu-version: ${{ matrix.tofu-version }}
 
-      - name: Run tf-plan
+      - name: Run tofu plan
         id: tf-plan
         uses: ./src/tf-plan
         with:
           chroot-directory: test-fixtures/plan-passed
-          environment: ${{ matrix.tf-version }}
+          environment: ${{ matrix.tofu-version }}
           upload-artifact: ${{ matrix.upload-artifact }}
 
-      - name: Run tf-apply
+      - name: Run tofu apply
         id: tf-apply-no-artifact
         uses: ./src/tf-apply
         if: matrix.tofu-apply == 'true' && matrix.upload-artifact == 'false'
         with:
           chroot-directory: test-fixtures/plan-passed
-          environment: ${{ matrix.tf-version }}
+          environment: ${{ matrix.tofu-version }}
           plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
 
-      - name: Run tf-apply
+      - name: Run tofu apply with artifact
         id: tf-apply-with-artifact
         uses: ./src/tf-apply
         if: matrix.tofu-apply == 'true' && matrix.upload-artifact == 'true'
         with:
           chroot-directory: test-fixtures/plan-passed
-          environment: ${{ matrix.tf-version }}
+          environment: ${{ matrix.tofu-version }}
           plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}

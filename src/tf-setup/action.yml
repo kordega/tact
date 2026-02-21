@@ -1,6 +1,6 @@
 ---
 name: tf-setup
-description: Setup tf-cli
+description: Setup tofu cli
 author: Kamil Zabielski
 
 inputs:
@@ -13,17 +13,17 @@ inputs:
     description: |
       The API token for a Terraform Cloud/Enterprise instance to place within the credentials block of the OpenTofu CLI configuration file.
     required: false
-  tf-version:
+  tofu-version:
     description: |
-      The version of tf-cli to install
+      The version of tofu-cli to install
     required: false
-  tf-version-file:
+  tofu-version-file:
     description: |
       Path to a file containing the OpenTofu version to install. 
       Supported version syntax is the same as for the tofu_version input. 
       Takes precedence over tofu_version if both are provided.
     required: false
-  tf-wrapper:
+  tofu-wrapper:
     description: |
       Whether to install a wrapper to wrap subsequent calls of the tofu binary and expose its STDOUT, STDERR, and exit code as outputs named stdout, stderr, and exitcode respectively. 
       Defaults to true.
@@ -42,13 +42,13 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Install tf-cli
+    - name: Install tofu-cli
       uses: opentofu/setup-opentofu@v1
       with:
         github_token: ${{ inputs.github-token }}
         cli_config_credentials_hostname: ${{ inputs.cli-config-credentials-hostname }}
         cli_config_credentials_token: ${{ inputs.cli-config-credentials-token }}
-        tofu_version: ${{ inputs.tf-version }}
-        tofu_version_file: ${{ inputs.tf-version-file }}
-        tofu_wrapper: ${{ inputs.tf-wrapper }}
+        tofu_version: ${{ inputs.tofu-version }}
+        tofu_version_file: ${{ inputs.tofu-version-file }}
+        tofu_wrapper: ${{ inputs.tofu-wrapper }}
         cache: ${{ inputs.cache }}

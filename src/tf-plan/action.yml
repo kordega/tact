@@ -13,13 +13,13 @@ inputs:
       The name of the tf environment to use when running tofu plan. 
       If not provided, the default environment will be used.
     required: true
-  tf-refresh:
+  tofu-refresh:
     description: |
       Whether to refresh the state before running tofu plan. 
       Defaults to true.
     required: false
     default: "true"
-  tf-destroy:
+  tofu-destroy:
     description: |
       Whether to run tofu plan with the -destroy flag. 
       Defaults to false.
@@ -74,8 +74,8 @@ runs:
         set +e
         tofu plan                           \
           -detailed-exitcode                \
-          -destroy=${{ inputs.tf-destroy }} \
-          -refresh=${{ inputs.tf-refresh }} \
+          -destroy=${{ inputs.tofu-destroy }} \
+          -refresh=${{ inputs.tofu-refresh }} \
           -out=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ github.sha }}.tfplan
         plan_exit_code=$?
         set -e
@@ -91,7 +91,7 @@ runs:
         echo "plan-file-path=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ github.sha }}.tfplan" >> "$GITHUB_OUTPUT"
         echo "plan-artifact-name=tf-plan-${{ inputs.environment }}-${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
-    - name: Upload tf plan as artifact
+    - name: Upload tfplan as artifact
       if: ${{ inputs.upload-artifact == 'true' }}
       uses: actions/upload-artifact@v6
       with:
