@@ -72,7 +72,7 @@ jobs:
         with:
           tofu-version: ${{ matrix.tofu-version }}
 
-      - name: Run tofu plan fpr apply test fixture
+      - name: Run tofu plan for apply test fixture
         id: tf-plan
         uses: ./src/tofu-plan
         with:
