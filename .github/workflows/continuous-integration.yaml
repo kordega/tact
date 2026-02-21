@@ -56,8 +56,10 @@ jobs:
         include:
           - tf-version: 1.6.0
             upload-artifact: 'true'
+            tofu-apply: 'false'
           - tf-version: 1.7.0
             upload-artifact: 'false'
+            tofu-apply: 'true'
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v6
@@ -74,3 +76,12 @@ jobs:
           chroot-directory: test-fixtures/plan-passed
           environment: ${{ matrix.tf-version }}
           upload-artifact: ${{ matrix.upload-artifact }}
+
+      - name: Run tf-apply
+        id: tf-apply
+        uses: ./src/tf-apply
+        if: matrix.tofu-apply == 'true'
+        with:
+          chroot-directory: test-fixtures/plan-passed
+          environment: ${{ matrix.tf-version }}
+          plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
