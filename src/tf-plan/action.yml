@@ -39,16 +39,16 @@ runs:
       id: tf-plan
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash
-      run:
+      run: |
         set +e
         opentofu plan                       \
           -detail-exitcode                  \
-          -destroy=${{ inputs.tf-destroy }} \ 
+          -destroy=${{ inputs.tf-destroy }} \
           -refresh=${{ inputs.tf-refresh }} \
           -output=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ github.sha }}.tfplan
-        set -e
-        
         plan_exit_code=$?
+        set -e
+
         if [ "$plan_exit_code" -eq 0 ]; then
           echo "plan-has-changes=false" >> "$GITHUB_OUTPUT"
         elif [ "$plan_exit_code" -eq 2 ]; then
