@@ -41,7 +41,7 @@ runs:
       shell: bash
       run: |
         set +e
-        opentofu plan                       \
+        tofu plan                           \
           -detail-exitcode                  \
           -destroy=${{ inputs.tf-destroy }} \
           -refresh=${{ inputs.tf-refresh }} \
