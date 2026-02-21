@@ -10,7 +10,7 @@ on:
     branches: [ '**' ]
 
 jobs:
-  tf-test:
+  tofu-test:
     runs-on: ubuntu-slim
     strategy:
       matrix:
@@ -47,7 +47,7 @@ jobs:
         if: steps.tf-fmt.outputs.status-code != matrix.status-code
         run: exit 1
 
-  tf-plan:
+  tofu-plan-apply:
     runs-on: ubuntu-slim
     strategy:
       matrix:
