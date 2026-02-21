@@ -1,6 +1,7 @@
 ---
+name: Continuous Integration
+run-name: ci-${{ github.event_name == 'pull_request' && github.event.number || github.run_number }}
 
-run-name: Continuous Integration
 
 on:
   push:
