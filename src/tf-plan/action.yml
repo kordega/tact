@@ -12,7 +12,7 @@ inputs:
     description: The name of the tf environment to use when running tf plan. If not provided, the default environment will be used.
     required: true
   tf-refresh:
-    description: Whether to refresh the state before running tf plan. Defaults to false.
+    description: Whether to refresh the state before running tf plan. Defaults to true.
     required: false
     default: "true"
   tf-destroy:
