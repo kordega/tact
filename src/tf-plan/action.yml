@@ -35,6 +35,10 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Show tofu version
+      shell: bash
+      run: tofu version
+
     - name: Run tf init
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash
