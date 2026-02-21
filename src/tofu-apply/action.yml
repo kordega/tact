@@ -55,20 +55,21 @@ runs:
           echo "plan-file-path=${{ inputs.plan-file-path }}" >> "$GITHUB_OUTPUT"
         fi
 
-    - name: Run tf init
+    - name: Run tofu init
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash
       run: |
-        echo "::group::Run tf init"
+        echo "::group::Run tofu init"
         tofu init        \
           -input=false   \
           -backend=false
         echo "::endgroup::"
 
-    - name: Run tf apply
+    - name: Run tofu apply
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash
       run: |
+        echo "::group::Run tofu apply"
         tofu apply \
           -auto-approve \
           -input=false \
