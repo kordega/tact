@@ -1,23 +1,23 @@
 ---
 name: tf-fmt
-description: Format files using tf
+description: Format files using tofu
 author: Kamil Zabielski
 
 inputs:
   chroot-directory:
-    description: Directory to chroot into before running terraform fmt
+    description: Directory to chroot into before running tofu fmt
     required: false
     default: "."
 
 outputs:
   status-code:
-    description: Exit code from tf fmt
+    description: Exit code from tofu fmt
     value: ${{ steps.tf-fmt.outputs.status-code }}
 
 runs:
   using: "composite"
   steps:
-    - name: Run tf-fmt
+    - name: Run tofu fmt
       id: tf-fmt
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash

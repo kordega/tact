@@ -1,30 +1,40 @@
 ---
 name: tf-plan
-description: Run tf plan
+description: Run tofu plan
 author: Kamil Zabielski
 
 inputs:
   chroot-directory:
-    description: Directory to chroot into before running tf plan
+    description: Directory to chroot into before running tofu plan
     required: false
     default: "."
   environment:
-    description: The name of the tf environment to use when running tf plan. If not provided, the default environment will be used.
+    description: |
+      The name of the tf environment to use when running tofu plan. 
+      If not provided, the default environment will be used.
     required: true
   tf-refresh:
-    description: Whether to refresh the state before running tf plan. Defaults to true.
+    description: |
+      Whether to refresh the state before running tofu plan. 
+      Defaults to true.
     required: false
     default: "true"
   tf-destroy:
-    description: Whether to run tf plan with the -destroy flag. Defaults to false.
+    description: |
+      Whether to run tofu plan with the -destroy flag. 
+      Defaults to false.
     required: false
     default: "false"
   plan-retention-days:
-    description: Number of days to retain the generated tf plan file. Defaults to 7.
+    description: |
+      Number of days to retain the generated tf plan file. 
+      Defaults to 7.
     required: false
     default: "7"
   upload-artifact:
-    description: Whether to upload the generated tf plan file as a GitHub Actions artifact. Defaults to true.
+    description: |
+      Whether to upload the generated tf plan file as a GitHub Actions artifact. 
+      Defaults to true.
     required: false
     default: "true"
 
