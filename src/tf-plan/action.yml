@@ -37,7 +37,9 @@ runs:
   steps:
     - name: Show tofu version
       shell: bash
-      run: tofu version
+      run: |
+        echo "::notice title=tf-plan-version::$(tofu version -json | jq -r '.terraform_version')"
+        echo "::notice title=tf-plan-platform::$(tofu version -json | jq -r '.platform')"
 
     - name: Run tf init
       working-directory: ${{ inputs.chroot-directory }}
