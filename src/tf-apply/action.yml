@@ -40,7 +40,7 @@ runs:
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash
       run: |
-        tofu apply                                          \
-          -auto-approve                                     \     
-          -input=false                                      \
+        tofu apply \
+          -auto-approve \
+          -input=false \
           "${{ inputs.plan-file-path }}"
