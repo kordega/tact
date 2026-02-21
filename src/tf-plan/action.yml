@@ -19,10 +19,14 @@ inputs:
     description: Whether to run tf plan with the -destroy flag. Defaults to false.
     required: false
     default: "false"
-  tf-plan-retention-days:
+  plan-retention-days:
     description: Number of days to retain the generated tf plan file. Defaults to 7.
     required: false
     default: "7"
+  upload-artifact:
+    description: Whether to upload the generated tf plan file as a GitHub Actions artifact. Defaults to true.
+    required: false
+    default: "true"
 
 outputs:
   plan-file-path:
@@ -75,3 +79,12 @@ runs:
           exit "$plan_exit_code"
         fi
         echo "plan-file-path=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ github.sha }}.tfplan" >> "$GITHUB_OUTPUT"
+        echo "plan-artifact-name=tf-plan-${{ inputs.environment }}-${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+    - name: Upload tf plan as artifact
+      if: ${{ inputs.upload-artifact == 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
+        path: ${{ steps.tf-plan.outputs.plan-file-path }}
+        retention-days: ${{ inputs.plan-retention-days }}
