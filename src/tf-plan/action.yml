@@ -35,6 +35,14 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Run tf init
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        tofu init        \
+          -input=false   \
+          -backend=false
+
     - name: Run tf plan
       id: tf-plan
       working-directory: ${{ inputs.chroot-directory }}
