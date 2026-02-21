@@ -42,7 +42,7 @@ runs:
       run: |
         set +e
         tofu plan                           \
-          -detail-exitcode                  \
+          -detailed-exitcode                \
           -destroy=${{ inputs.tf-destroy }} \
           -refresh=${{ inputs.tf-refresh }} \
           -output=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ github.sha }}.tfplan
