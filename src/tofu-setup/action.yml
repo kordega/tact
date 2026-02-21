@@ -1,5 +1,5 @@
 ---
-name: tf-setup
+name: tofu-setup
 description: Setup tofu cli
 author: Kamil Zabielski
 
@@ -20,8 +20,8 @@ inputs:
   tofu-version-file:
     description: |
       Path to a file containing the OpenTofu version to install. 
-      Supported version syntax is the same as for the tofu_version input. 
-      Takes precedence over tofu_version if both are provided.
+      Supported version syntax is the same as for the tofu-version input. 
+      Takes precedence over tofu-version if both are provided.
     required: false
   tofu-wrapper:
     description: |
