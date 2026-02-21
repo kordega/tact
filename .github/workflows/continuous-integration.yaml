@@ -32,13 +32,13 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Run tofu setup
-        uses: ./src/tf-setup
+        uses: ./src/tofu-setup
         with:
           tofu-version: ${{ matrix.tofu-version }}
 
       - name: Run tofu fmt
         id: tf-fmt
-        uses: ./src/tf-fmt
+        uses: ./src/tofu-fmt
         continue-on-error: true
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
@@ -66,13 +66,13 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Run tofu setup
-        uses: ./src/tf-setup
+        uses: ./src/tofu-setup
         with:
           tofu-version: ${{ matrix.tofu-version }}
 
       - name: Run tofu plan
         id: tf-plan
-        uses: ./src/tf-plan
+        uses: ./src/tofu-plan
         with:
           chroot-directory: test-fixtures/plan-passed
           environment: ${{ matrix.tofu-version }}
@@ -80,7 +80,7 @@ jobs:
 
       - name: Run tofu apply
         id: tf-apply-no-artifact
-        uses: ./src/tf-apply
+        uses: ./src/tofu-apply
         if: matrix.tofu-apply == 'true' && matrix.upload-artifact == 'false'
         with:
           chroot-directory: test-fixtures/plan-passed
@@ -89,7 +89,7 @@ jobs:
 
       - name: Run tofu apply with artifact
         id: tf-apply-with-artifact
-        uses: ./src/tf-apply
+        uses: ./src/tofu-apply
         if: matrix.tofu-apply == 'true' && matrix.upload-artifact == 'true'
         with:
           chroot-directory: test-fixtures/plan-passed
