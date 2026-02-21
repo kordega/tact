@@ -10,6 +10,19 @@ on:
     branches: [ '**' ]
 
 jobs:
+
+  yamllint:
+    runs-on: ubuntu-slim
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v6
+
+      - name: Run yamllint
+        uses: ibiqlik/action-yamllint@v3
+        with:
+          format: github
+
+
   tofu-test:
     runs-on: ubuntu-slim
     strategy:
