@@ -10,7 +10,7 @@ inputs:
     default: "."
   environment:
     description: The name of the tf environment to use when running tf apply. If not provided, the default environment will be used.
-    required: true
+    required: false
   plan-file-path:
     description: The path to the tf plan file to apply. If not provided, the action will attempt to find a tf plan file in the default location.
     required: false
