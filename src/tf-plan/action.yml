@@ -45,7 +45,7 @@ runs:
           -detailed-exitcode                \
           -destroy=${{ inputs.tf-destroy }} \
           -refresh=${{ inputs.tf-refresh }} \
-          -output=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ github.sha }}.tfplan
+          -out=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ github.sha }}.tfplan
         plan_exit_code=$?
         set -e
 
