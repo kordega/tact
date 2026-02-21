@@ -1,6 +1,7 @@
 ---
+name: Continuous Integration
+run-name: ci-${{ github.event.number }}
 
-run-name: Continuous Integration
 
 on:
   push:
