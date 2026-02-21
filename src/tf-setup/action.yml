@@ -35,7 +35,7 @@ runs:
         github_token: ${{ inputs.github-token }}
         cli_config_credentials_hostname: ${{ inputs.cli-config-credentials-hostname }}
         cli_config_credentials_token: ${{ inputs.cli-config-credentials-token }}
-        version: ${{ inputs.tofu-version }}
-        version_file: ${{ inputs.tofu-version-file }}
-        cache: ${{ inputs.cache }}
+        tofu_version: ${{ inputs.tofu-version }}
+        tofu_version_file: ${{ inputs.tofu-version-file }}
         tofu_wrapper: ${{ inputs.tofu-wrapper }}
+        cache: ${{ inputs.cache }}
