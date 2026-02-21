@@ -15,16 +15,45 @@ inputs:
     description: The path to the tf plan file to apply. If not provided, the action will attempt to find a tf plan file in the default location.
     required: false
     default: ""
+  plan-artifact-name:
+    description: The name of the GitHub Actions artifact containing the tf plan file to apply. If not provided, the action will attempt to find a tf plan file in the default location. Takes precedence over plan-file-path if both are provided.
+    required: false
+    default: ""
 
 runs:
   using: "composite"
   steps:
-    - name: Show tofu version
+    - name: Either plan-file-path or plan-artifact-name must be provided
+      if: ${{ inputs.plan-file-path == '' && inputs.plan-artifact-name == '' }}
       shell: bash
       run: |
-        echo "::group::Show tofu version"
-        tofu version
-        echo "::endgroup::"
+        echo "::error::Either plan-file-path or plan-artifact-name must be provided"
+        exit 1
+
+    - name: Only one of plan-file-path or plan-artifact-name must be provided
+      if: ${{ inputs.plan-file-path != '' && inputs.plan-artifact-name != '' }}
+      shell: bash
+      run: |
+        echo "::error::Only one of plan-file-path or plan-artifact-name must be provided"
+        exit 1
+
+    - name: Download plan artifact if plan-artifact-name is provided
+      if: ${{ inputs.plan-artifact-name != '' }}
+      id: download-plan-artifact
+      uses: actions/download-artifact@v7
+      with:
+        name: ${{ inputs.plan-artifact-name }}
+        path: ${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ github.sha }}.tfplan
+
+    - name: Set plan-file-path
+      id: set-plan-file-path
+      shell: bash
+      run: |
+        if [[ "${{ inputs.plan-artifact-name }}" != "" ]]; then
+          echo "plan-file-path=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ github.sha }}.tfplan" >> "$GITHUB_OUTPUT"
+        else
+          echo "plan-file-path=${{ inputs.plan-file-path }}" >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Run tf init
       working-directory: ${{ inputs.chroot-directory }}
@@ -43,4 +72,4 @@ runs:
         tofu apply \
           -auto-approve \
           -input=false \
-          "${{ inputs.plan-file-path }}"
+          "${{ steps.set-plan-file-path.outputs.plan-file-path }}"
