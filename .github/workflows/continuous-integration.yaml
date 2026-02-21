@@ -58,9 +58,11 @@ jobs:
           - tofu-version: 1.6.0
             upload-artifact: 'true'
             tofu-apply: 'false'
+            tofu-destroy: 'false'
           - tofu-version: 1.7.0
             upload-artifact: 'false'
             tofu-apply: 'true'
+            tofu-destroy: 'true'
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v6
@@ -70,7 +72,7 @@ jobs:
         with:
           tofu-version: ${{ matrix.tofu-version }}
 
-      - name: Run tofu plan
+      - name: Run tofu plan for apply test fixture
         id: tf-plan
         uses: ./src/tofu-plan
         with:
@@ -78,7 +80,7 @@ jobs:
           environment: ${{ matrix.tofu-version }}
           upload-artifact: ${{ matrix.upload-artifact }}
 
-      - name: Run tofu apply
+      - name: Run tofu apply without artifact
         id: tf-apply-no-artifact
         uses: ./src/tofu-apply
         if: matrix.tofu-apply == 'true' && matrix.upload-artifact == 'false'
@@ -95,3 +97,22 @@ jobs:
           chroot-directory: test-fixtures/plan-passed
           environment: ${{ matrix.tofu-version }}
           plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
+
+      - name: Run tofu plan for destroy test fixture
+        id: tf-plan-destroy
+        uses: ./src/tofu-plan
+        if: matrix.tofu-destroy == 'true'
+        with:
+          chroot-directory: test-fixtures/plan-passed
+          environment: ${{ matrix.tofu-version }}
+          tofu-destroy: '${{ matrix.tofu-destroy }}'
+          upload-artifact: '${{ matrix.upload-artifact }}'
+
+      - name: Run tofu apply for destroy test fixture
+        id: tf-apply-destroy
+        uses: ./src/tofu-apply
+        if: matrix.tofu-destroy == 'true'
+        with:
+          chroot-directory: test-fixtures/plan-passed
+          environment: ${{ matrix.tofu-version }}
+          plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
