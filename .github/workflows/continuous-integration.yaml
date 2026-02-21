@@ -78,7 +78,7 @@ jobs:
           upload-artifact: ${{ matrix.upload-artifact }}
 
       - name: Run tf-apply
-        id: tf-apply
+        id: tf-apply-no-artifact
         uses: ./src/tf-apply
         if: matrix.tofu-apply == 'true' && matrix.upload-artifact == 'false'
         with:
@@ -87,7 +87,7 @@ jobs:
           plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
 
       - name: Run tf-apply
-        id: tf-apply
+        id: tf-apply-with-artifact
         uses: ./src/tf-apply
         if: matrix.tofu-apply == 'true' && matrix.upload-artifact == 'true'
         with:
