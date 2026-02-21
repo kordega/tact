@@ -22,5 +22,7 @@ runs:
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash
       run: |
-        tofu fmt -check -recursive .
-        echo "status-code=$?" >> "$GITHUB_OUTPUT"
+        status_code=0
+        tofu fmt -check -recursive . || status_code=$?
+        echo "status-code=$status_code" >> "$GITHUB_OUTPUT"
+        exit "$status_code"

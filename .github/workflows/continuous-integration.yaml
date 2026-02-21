@@ -43,7 +43,7 @@ jobs:
           chroot-directory: ${{ matrix.chroot-directory }}
 
       - name: Assert tf-fmt status code
-        if: ${{ steps.tf-fmt.outputs.status-code != matrix.status-code }}
+        if: steps.tf-fmt.outputs.status-code != matrix.status-code
         run: exit 1
 
   tf-plan-apply:
