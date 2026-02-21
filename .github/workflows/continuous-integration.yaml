@@ -46,15 +46,18 @@ jobs:
         if: steps.tf-fmt.outputs.status-code != matrix.status-code
         run: exit 1
 
-  tf-plan-apply:
-    needs:
-      - tf-test
+  tf-plan:
     runs-on: ubuntu-slim
     strategy:
       matrix:
         tf-version:
           - 1.6.0
           - 1.7.0
+        include:
+          - tf-version: 1.6.0
+            upload-artifact: 'true'
+          - tf-version: 1.7.0
+            upload-artifact: 'false'
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v6
@@ -63,3 +66,11 @@ jobs:
         uses: ./src/tf-setup
         with:
           tf-version: ${{ matrix.tf-version }}
+
+      - name: Run tf-plan
+        id: tf-plan
+        uses: ./src/tf-plan
+        with:
+          chroot-directory: test-fixtures/plan-passed
+          environment: ${{ matrix.tf-version }}
+          upload-artifact: ${{ matrix.upload-artifact }}
