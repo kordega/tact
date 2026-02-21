@@ -16,4 +16,4 @@ runs:
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash
       run: |
-        opentofu fmt -check -recursive .
+        tofu fmt -check -recursive .
