@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-slim
     strategy:
       matrix:
-        chroot-directory: 
+        chroot-directory:
           - test-fixtures/plan-apply/plan-apply-passed/plan-apply-passed-01
         tofu-version:
           - 1.6.0
