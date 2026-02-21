@@ -1,0 +1,51 @@
+---
+
+run-name: Continuous Integration
+
+on:
+  push:
+    branches: [ 'main' ]
+  pull_request:
+    branches: [ '**' ]
+
+jobs:
+  tf-test:
+    runs-on: ubuntu-slim
+    strategy:
+      matrix:
+        tf-version:
+          - 1.6.0
+          - 1.7.0
+        chroot-directory:
+          - test-fixtures/fmt-ok
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v6
+
+      - name: Run tf-setup
+        uses: ./src/tf-setup
+        with:
+          tf-version: ${{ matrix.tf-version }}
+
+      - name: Run tf-fmt
+        uses: ./src/tf-fmt
+        with:
+          chroot-directory: ${{ matrix.chroot-directory }}
+
+  tf-plan-apply:
+    needs:
+      - tf-test
+    runs-on: ubuntu-slim
+    strategy:
+      matrix:
+        tf-version:
+          - 1.6.0
+          - 1.7.0
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v6
+
+      - name: Run tf-setup
+        uses: ./src/tf-setup
+        with:
+          tf-version: ${{ matrix.tf-version }}
