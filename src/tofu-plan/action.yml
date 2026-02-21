@@ -66,6 +66,19 @@ runs:
           -backend=false
         echo "::endgroup::"
 
+    - name: Generate random-id for tofu plan
+      id: generate-random-id
+      shell: bash
+      run: |
+        echo "plan-id=$(shuf -er -n8  {A..Z} {a..z} {0..9} | tr -d '\n')" >> "$GITHUB_OUTPUT"
+
+    - name: Generate tofu plan name and file path
+      id: generate-plan-name
+      shell: bash
+      run: |
+        echo "plan-file-path=${{ runner.temp }}/tofu-plan-${{ inputs.environment }}-${{ github.sha }}-${{ steps.generate-random-id.outputs.plan-id }}.tfplan" >> "$GITHUB_OUTPUT"
+        echo "plan-artifact-name=tofu-plan-${{ inputs.environment }}-${{ github.sha }}-${{ steps.generate-random-id.outputs.plan-id }}" >> "$GITHUB_OUTPUT"
+        
     - name: Run tf plan
       id: tf-plan
       working-directory: ${{ inputs.chroot-directory }}
@@ -76,7 +89,7 @@ runs:
           -detailed-exitcode                \
           -destroy=${{ inputs.tofu-destroy }} \
           -refresh=${{ inputs.tofu-refresh }} \
-          -out=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ github.sha }}.tfplan
+          -out="${{ steps.generate-plan-name.outputs.plan-file-path }}"
         plan_exit_code=$?
         set -e
 
@@ -88,13 +101,11 @@ runs:
           echo "tf plan failed with exit code $plan_exit_code"
           exit "$plan_exit_code"
         fi
-        echo "plan-file-path=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ github.sha }}.tfplan" >> "$GITHUB_OUTPUT"
-        echo "plan-artifact-name=tf-plan-${{ inputs.environment }}-${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
     - name: Upload tfplan as artifact
       if: ${{ inputs.upload-artifact == 'true' }}
       uses: actions/upload-artifact@v6
       with:
-        name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
-        path: ${{ steps.tf-plan.outputs.plan-file-path }}
+        name: ${{ steps.generate-plan-name.outputs.plan-artifact-name }}
+        path: ${{ steps.generate-plan-name.outputs.plan-file-path }}
         retention-days: ${{ inputs.plan-retention-days }}
