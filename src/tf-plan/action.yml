@@ -1,0 +1,60 @@
+---
+name: tf-plan
+description: Run tf plan
+author: Kamil Zabielski
+
+inputs:
+  chroot-directory:
+    description: Directory to chroot into before running tf plan
+    required: false
+    default: "."
+  environment:
+    description: The name of the tf environment to use when running tf plan. If not provided, the default environment will be used.
+    required: true
+  tf-refresh:
+    description: Whether to refresh the state before running tf plan. Defaults to false.
+    required: false
+    default: "true"
+  tf-destroy:
+    description: Whether to run tf plan with the -destroy flag. Defaults to false.
+    required: false
+    default: "false"
+  tf-plan-retention-days:
+    description: Number of days to retain the generated tf plan file. Defaults to 7.
+    required: false
+    default: "7"
+
+outputs:
+  plan-file-path:
+    description: The path to the generated tf-plan file.
+    value: ${{ steps.tf-plan.outputs.plan-file-path }}
+  plan-has-changes:
+    description: Whether the generated tf plan contains changes. Will be true if the plan contains any changes, including those that require no action, and false if the plan is empty and contains no changes.
+    value: ${{ steps.tf-plan.outputs.plan-has-changes }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run tf plan
+      id: tf-plan
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run:
+        set +e
+        opentofu plan                       \
+          -detail-exitcode                  \
+          -destroy=${{ inputs.tf-destroy }} \ 
+          -refresh=${{ inputs.tf-refresh }} \
+          -output=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ github.sha }}.tfplan
+        set -e
+        
+        plan_exit_code=$?
+        if [ "$plan_exit_code" -eq 0 ]; then
+          echo "plan-has-changes=false" >> "$GITHUB_OUTPUT"
+        elif [ "$plan_exit_code" -eq 2 ]; then
+          echo "plan-has-changes=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "tf plan failed with exit code $plan_exit_code"
+          exit "$plan_exit_code"
+        fi
+        echo "plan-file-path=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ github.sha }}.tfplan" >> "$GITHUB_OUTPUT"

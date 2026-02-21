@@ -46,9 +46,7 @@ jobs:
         if: steps.tf-fmt.outputs.status-code != matrix.status-code
         run: exit 1
 
-  tf-plan-apply:
-    needs:
-      - tf-test
+  tf-plan:
     runs-on: ubuntu-slim
     strategy:
       matrix:
@@ -63,3 +61,10 @@ jobs:
         uses: ./src/tf-setup
         with:
           tf-version: ${{ matrix.tf-version }}
+
+      - name: Run tf-plan
+        id: tf-plan
+        uses: ./src/tf-plan
+        with:
+          chroot-directory: test-fixtures/plan-passed
+          environment: test
