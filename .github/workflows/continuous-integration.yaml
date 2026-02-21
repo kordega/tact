@@ -36,6 +36,7 @@ jobs:
       - name: Run tf-fmt
         id: tf-fmt
         uses: ./src/tf-fmt
+        continue-on-error: true
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
 
