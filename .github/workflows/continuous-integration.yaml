@@ -14,18 +14,16 @@ jobs:
     runs-on: ubuntu-slim
     strategy:
       matrix:
+        tofu-version:
+          - 1.6.0
+          - 1.7.0
+        chroot-directory:
+          - test-fixtures/fmt/fmt-passed/fmt-passed-01
+          - test-fixtures/fmt/fmt-failed/fmt-failed-01
         include:
-          - tofu-version: 1.6.0
-            chroot-directory: test-fixtures/fmt-passed
+          - chroot-directory: test-fixtures/fmt/fmt-passed/fmt-passed-01
             status-code: '0'
-          - tofu-version: 1.6.0
-            chroot-directory: test-fixtures/fmt-failed
-            status-code: '3'
-          - tofu-version: 1.7.0
-            chroot-directory: test-fixtures/fmt-passed
-            status-code: '0'
-          - tofu-version: 1.7.0
-            chroot-directory: test-fixtures/fmt-failed
+          - chroot-directory: test-fixtures/fmt/fmt-failed/fmt-failed-01
             status-code: '3'
     steps:
       - name: Checkout the repository
@@ -51,6 +49,8 @@ jobs:
     runs-on: ubuntu-slim
     strategy:
       matrix:
+        chroot-directory: 
+          - test-fixtures/plan-apply/plan-apply-passed/plan-apply-passed-01
         tofu-version:
           - 1.6.0
           - 1.7.0
@@ -76,7 +76,7 @@ jobs:
         id: tf-plan
         uses: ./src/tofu-plan
         with:
-          chroot-directory: test-fixtures/plan-passed
+          chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
           upload-artifact: ${{ matrix.upload-artifact }}
 
@@ -85,7 +85,7 @@ jobs:
         uses: ./src/tofu-apply
         if: matrix.tofu-apply == 'true' && matrix.upload-artifact == 'false'
         with:
-          chroot-directory: test-fixtures/plan-passed
+          chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
           plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
 
@@ -94,7 +94,7 @@ jobs:
         uses: ./src/tofu-apply
         if: matrix.tofu-apply == 'true' && matrix.upload-artifact == 'true'
         with:
-          chroot-directory: test-fixtures/plan-passed
+          chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
           plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
 
@@ -103,7 +103,7 @@ jobs:
         uses: ./src/tofu-plan
         if: matrix.tofu-destroy == 'true'
         with:
-          chroot-directory: test-fixtures/plan-passed
+          chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
           tofu-destroy: '${{ matrix.tofu-destroy }}'
           upload-artifact: '${{ matrix.upload-artifact }}'
@@ -113,6 +113,6 @@ jobs:
         uses: ./src/tofu-apply
         if: matrix.tofu-destroy == 'true'
         with:
-          chroot-directory: test-fixtures/plan-passed
+          chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
           plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
