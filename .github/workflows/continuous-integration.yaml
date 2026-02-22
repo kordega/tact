@@ -84,10 +84,11 @@ jobs:
           [ "$(tofu version -json | jq -r '.terraform_version')" = "${{ matrix.tofu-version }}" ] && exit 0 || exit 1
           echo "::endgroup::"
 
-  unit-fmt:
+  units-tofu-fmt:
     name: Units - tofu fmt
     needs:
       - get-tofu-releases
+      - unit-setup
     runs-on: ubuntu-slim
     strategy:
       matrix:
