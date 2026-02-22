@@ -80,13 +80,13 @@ jobs:
           [ "$(tofu version -json | jq -r '.terraform_version')" = "${{ matrix.tofu-version }}" ] && exit 0 || exit 1
           echo "::endgroup::"
 
-  tofu-test:
+  unit-fmt:
     runs-on: ubuntu-slim
+    needs: 
+      - get-tofu-releases
     strategy:
       matrix:
-        tofu-version:
-          - 1.6.0
-          - 1.7.0
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
           - test-fixtures/fmt/fmt-passed/fmt-passed-01
           - test-fixtures/fmt/fmt-failed/fmt-failed-01
