@@ -123,15 +123,13 @@ jobs:
         chroot-directory:
           - test-fixtures/plan-apply/plan-apply-passed/plan-apply-passed-01
         tofu-version:
-          - 1.6.0
-          - 1.7.0
+          - 1.11.5
+          - 1.10.9
         include:
-          - tofu-version: 1.6.0
-            upload-artifact: 'true'
+          - tofu-version: 1.11.5
             tofu-apply: 'false'
             tofu-destroy: 'false'
-          - tofu-version: 1.7.0
-            upload-artifact: 'false'
+          - tofu-version: 1.10.9
             tofu-apply: 'true'
             tofu-destroy: 'true'
     steps:
