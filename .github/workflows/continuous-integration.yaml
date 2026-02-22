@@ -21,7 +21,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .cache/tofu-releases.json
-          key: tofu-releases-${{ github.run_id }}
+          key: tofu-releases-v1
           restore-keys: |
             tofu-releases-
 
