@@ -89,7 +89,7 @@ runs:
           exit "$plan_exit_code"
         fi
         echo "plan-file-path=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ github.sha }}.tfplan" >> "$GITHUB_OUTPUT"
-        echo "plan-artifact-name=tf-plan-${{ inputs.environment }}-${{ github.sha }}" >> "$GITHUB_OUTPUT"
+        echo "plan-artifact-name=tf-plan-${{ inputs.environment }}-${{ github.sha }}.tfplan" >> "$GITHUB_OUTPUT"
 
     - name: Upload tfplan as artifact
       if: ${{ inputs.upload-artifact == 'true' }}
