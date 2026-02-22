@@ -10,13 +10,25 @@ on:
     branches: [ '**' ]
 
 jobs:
+  get-tofu-releases:
+    runs-on: ubuntu-slim
+    outputs:
+      releases: ${{ steps.get-releases.outputs.releases }}
+    steps:
+      - name: Get last 10 tofu releases
+        id: get-releases
+        shell: bash
+        run: |
+          releases="$(curl -s 'https://api.github.com/repos/opentofu/opentofu/releases?per_page=10' | jq -c '[.[].tag_name | sub("^v";"")]')"
+          echo "releases=$releases" >> "$GITHUB_OUTPUT"
+
   tofu-test:
     runs-on: ubuntu-slim
+    needs:
+      - get-tofu-releases
     strategy:
       matrix:
-        tofu-version:
-          - 1.6.0
-          - 1.7.0
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
           - test-fixtures/fmt/fmt-passed/fmt-passed-01
           - test-fixtures/fmt/fmt-failed/fmt-failed-01
@@ -47,13 +59,14 @@ jobs:
 
   tofu-plan-apply:
     runs-on: ubuntu-slim
+    needs:
+      - get-tofu-releases
     strategy:
+      fail-fast: false
       matrix:
         chroot-directory:
           - test-fixtures/plan-apply/plan-apply-passed/plan-apply-passed-01
-        tofu-version:
-          - 1.6.0
-          - 1.7.0
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         include:
           - tofu-version: 1.6.0
             upload-artifact: 'true'
