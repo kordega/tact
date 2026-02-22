@@ -10,6 +10,45 @@ on:
     branches: [ '**' ]
 
 jobs:
+  get-tofu-releases:
+    name: Get tofu minor releases
+    runs-on: ubuntu-slim
+    outputs:
+      releases: ${{ steps.read-releases.outputs.releases }}
+    steps:
+      - name: Restore cached releases
+        id: cache-releases
+        uses: actions/cache@v4
+        with:
+          path: .cache/tofu-releases.json
+          key: tofu-releases-${{ github.run_id }}
+          restore-keys: |
+            tofu-releases-
+
+      - name: Fetch releases if cache missed
+        id: get-tofu-releases
+        if: steps.cache-releases.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          mkdir -p .cache
+          releases="$(curl -s 'https://api.github.com/repos/opentofu/opentofu/releases' | jq -c '
+            map(select(.prerelease == false)) |
+            map(.tag_name | sub("^v";"")) |
+            map(select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))) |
+            map(split(".") | {major:(.[0]|tonumber), minor:(.[1]|tonumber), patch:(.[2]|tonumber), ver:(.[0]+"."+.[1]+"."+.[2])}) |
+            sort_by(.major,.minor,.patch) |
+            group_by(.major,.minor) |
+            map(last.ver)
+          ')"
+          echo "$releases" > .cache/tofu-releases.json
+
+      - name: Read releases
+        id: read-releases
+        shell: bash
+        run: |
+          releases="$(cat .cache/tofu-releases.json)"
+          echo "releases=$releases" >> "$GITHUB_OUTPUT"
+
   tofu-test:
     runs-on: ubuntu-slim
     strategy:
