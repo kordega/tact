@@ -80,21 +80,17 @@ jobs:
           [ "$(tofu version -json | jq -r '.terraform_version')" = "${{ matrix.tofu-version }}" ] && exit 0 || exit 1
           echo "::endgroup::"
 
-  tofu-test:
+  unit-fmt:
+    name: Units - tofu-fmt
+    needs:
+      - get-tofu-releases
     runs-on: ubuntu-slim
     strategy:
       matrix:
-        tofu-version:
-          - 1.6.0
-          - 1.7.0
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
           - test-fixtures/fmt/fmt-passed/fmt-passed-01
           - test-fixtures/fmt/fmt-failed/fmt-failed-01
-        include:
-          - chroot-directory: test-fixtures/fmt/fmt-passed/fmt-passed-01
-            status-code: '0'
-          - chroot-directory: test-fixtures/fmt/fmt-failed/fmt-failed-01
-            status-code: '3'
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v6
@@ -112,8 +108,28 @@ jobs:
           chroot-directory: ${{ matrix.chroot-directory }}
 
       - name: Assert tofu fmt status code
-        if: steps.tf-fmt.outputs.status-code != matrix.status-code
-        run: exit 1
+        shell: bash
+        env:
+          CHROOT_DIR: ${{ matrix.chroot-directory }}
+          STATUS_CODE: ${{ steps.tf-fmt.outputs.status-code }}
+        run: |
+          case "$CHROOT_DIR" in
+            test-fixtures/fmt/fmt-passed/fmt-passed-01)
+              expected_status=0
+              ;;
+            test-fixtures/fmt/fmt-failed/fmt-failed-01)
+              expected_status=3
+              ;;
+            *)
+              echo "Unknown chroot directory: $CHROOT_DIR"
+              exit 1
+              ;;
+          esac
+
+          if [ "$STATUS_CODE" != "$expected_status" ]; then
+            echo "Expected status $expected_status but got $STATUS_CODE"
+            exit 1
+          fi
 
   tofu-plan-apply:
     runs-on: ubuntu-slim
