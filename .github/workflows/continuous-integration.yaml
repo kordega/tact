@@ -81,7 +81,7 @@ jobs:
           echo "::endgroup::"
 
   unit-fmt:
-    name: Units - tofu-fmt
+    name: Units - tofu fmt
     needs:
       - get-tofu-releases
     runs-on: ubuntu-slim
@@ -114,10 +114,10 @@ jobs:
           STATUS_CODE: ${{ steps.tf-fmt.outputs.status-code }}
         run: |
           case "$CHROOT_DIR" in
-            test-fixtures/fmt/fmt-passed/fmt-passed-01)
+            *fmt-passed/*)
               expected_status=0
               ;;
-            test-fixtures/fmt/fmt-failed/fmt-failed-01)
+            *fmt-failed/*)
               expected_status=3
               ;;
             *)
