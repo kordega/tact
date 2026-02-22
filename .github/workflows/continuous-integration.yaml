@@ -52,13 +52,14 @@ jobs:
           [ "$(tofu version -json | yq -r '.terraform_version')" = "${{ matrix.tofu-version }}" ] && exit 0 || exit 1
           echo "::endgroup::"
 
-  tf-fmt:
+  unit-fmt:
     runs-on: ubuntu-slim
+    needs:
+      - get-tofu-releases
+      - unit-setup
     strategy:
       matrix:
-        tofu-version:
-          - 1.6.0
-          - 1.7.0
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
           - tst/fmt-ok
           - tst/fmt-failed
@@ -86,52 +87,6 @@ jobs:
       - name: Assert tofu fmt status code
         if: steps.tf-fmt.outputs.status-code != matrix.status-code
         run: exit 1
-
-  tf-plan-with-changes:
-    runs-on: ubuntu-slim
-    outputs:
-      tofu-version: ${{ matrix.tofu-version }}
-      chroot-directory: ${{ matrix.chroot-directory }}
-      plan-has-changes: ${{ steps.tf-plan.outputs.plan-has-changes }}
-      plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
-    strategy:
-      fail-fast: false
-      matrix:
-        chroot-directory:
-          - tst/plan-with-changes
-        tofu-version:
-          - 1.6.0
-          - 1.7.0
-        tofu-apply:
-          - 'true'
-          - 'false'
-        tofu-destroy:
-          - 'false'
-          - 'true'
-    steps:
-      - name: Checkout the repository
-        uses: actions/checkout@v6
-
-      - name: Run tofu setup
-        uses: ./src/tofu-setup
-        with:
-          tofu-version: ${{ matrix.tofu-version }}
-
-      - name: Run tofu plan for apply test fixture
-        id: tf-plan
-        uses: ./src/tofu-plan
-        with:
-          chroot-directory: ${{ matrix.chroot-directory }}
-          environment: ${{ matrix.tofu-version }}
-          upload-artifact: ${{ matrix.upload-artifact }}
-
-      - name: Run tofu plan for apply test fixture
-        id: tf-apply
-        uses: ./src/tofu-apply
-        with:
-          environment: ${{ matrix.tofu-version }}
-          chroot-directory: ${{ matrix.chroot-directory }}
-          plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
 
   tf-plan-apply-no-changes:
     runs-on: ubuntu-slim
