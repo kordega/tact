@@ -59,17 +59,30 @@ runs:
         tofu version
         echo "::endgroup::"
 
-    - name: Run tf init
+    - name: Run tofu init
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash
       run: |
-        echo "::group::Run tf init"
+        echo "::group::Run tofu init"
         tofu init        \
           -input=false   \
           -backend=false
         echo "::endgroup::"
 
-    - name: Run tf plan
+    - name: Create random-id for tofu plan filename and artifact name
+      id: random-id
+      shell: bash
+      run: |
+        echo "random-id=$(shuf -er -n8  {A..Z} {a..z} {0..9} | tr -d '\n')" >> "$GITHUB_OUTPUT"
+
+    - name: Generate tofu plan filename and artifact name
+      id: generate-plan-filename
+      shell: bash
+      run: |
+        echo "plan-file-path=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.tfplan" >> "$GITHUB_OUTPUT"
+        echo "plan-artifact-name=tf-plan-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.tfplan" >> "$GITHUB_OUTPUT"
+
+    - name: Run tofu plan
       id: tf-plan
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash
@@ -79,7 +92,7 @@ runs:
           -detailed-exitcode                \
           -destroy=${{ inputs.tofu-destroy }} \
           -refresh=${{ inputs.tofu-refresh }} \
-          -out=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ github.sha }}.tfplan
+          -out=${{ steps.generate-plan-filename.outputs.plan-file-path }}
         plan_exit_code=$?
         set -e
 
@@ -91,8 +104,8 @@ runs:
           echo "tf plan failed with exit code $plan_exit_code"
           exit "$plan_exit_code"
         fi
-        echo "plan-file-path=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ github.sha }}.tfplan" >> "$GITHUB_OUTPUT"
-        echo "plan-artifact-name=tf-plan-${{ inputs.environment }}-${{ github.sha }}.tfplan" >> "$GITHUB_OUTPUT"
+        echo "plan-file-path=${{ steps.generate-plan-filename.outputs.plan-file-path }}" >> "$GITHUB_OUTPUT"
+        echo "plan-artifact-name=${{ steps.generate-plan-filename.outputs.plan-artifact-name }}" >> "$GITHUB_OUTPUT"
 
     - name: Upload tfplan as artifact
       if: ${{ inputs.upload-artifact == 'true' }}
