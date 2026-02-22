@@ -40,7 +40,7 @@ jobs:
             group_by(.major,.minor) |
             map(last.ver)
           ')"
-          echo $releases
+          echo "$releases"
           echo "$releases" > .cache/tofu-releases.json
 
       - name: Read releases
