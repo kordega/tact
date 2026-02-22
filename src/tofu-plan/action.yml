@@ -46,7 +46,7 @@ outputs:
     description: Whether the generated tf plan contains changes. Will be true if the plan contains any changes, including those that require no action, and false if the plan is empty and contains no changes.
     value: ${{ steps.tf-plan.outputs.plan-has-changes }}
   plan-artifact-name:
-    description: The name of the uploaded tf plan artifact when upload-artifact is true.
+    description: The name to use for the tf plan artifact (used when upload-artifact is true).
     value: ${{ steps.tf-plan.outputs.plan-artifact-name }}
 
 runs:
