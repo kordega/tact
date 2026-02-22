@@ -49,6 +49,35 @@ jobs:
           releases="$(cat .cache/tofu-releases.json)"
           echo "releases=$releases" >> "$GITHUB_OUTPUT"
 
+  unit-setup:
+    needs: 
+      - get-tofu-releases
+    strategy:
+      fail-fast: true
+      matrix:
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
+    runs-on: ubuntu-slim
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v6
+
+      - name: Run tofu setup
+        uses: ./src/tofu-setup
+        id: tofu-setup
+        with:
+          tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Assert tofu setup by checking version
+        shell: bash
+        run: |
+          echo "::group::Show tofu version"
+          tofu version
+          echo "::endgroup::"
+
+          echo "::group::Check tofu version"
+          [ "$(tofu version -json | yq -r '.terraform_version')" = "${{ matrix.tofu-version }}" ] && exit 0 || exit 1
+          echo "::endgroup::"
+
   tofu-test:
     runs-on: ubuntu-slim
     strategy:
