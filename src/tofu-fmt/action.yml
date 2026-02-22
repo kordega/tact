@@ -9,11 +9,6 @@ inputs:
     required: false
     default: "."
 
-outputs:
-  status-code:
-    description: Exit code from tofu fmt
-    value: ${{ steps.tf-fmt.outputs.status-code }}
-
 runs:
   using: "composite"
   steps:
@@ -22,7 +17,4 @@ runs:
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash
       run: |
-        status_code=0
-        tofu fmt -check -recursive . || status_code=$?
-        echo "status-code=$status_code" >> "$GITHUB_OUTPUT"
-        exit "$status_code"
+        tofu fmt -diff -check -recursive .

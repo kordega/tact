@@ -64,9 +64,9 @@ jobs:
           - tst/fmt-failed
         include:
           - chroot-directory: tst/fmt-ok
-            status-code: '0'
+            passed: 'true'
           - chroot-directory: tst/fmt-failed
-            status-code: '3'
+            passed: 'false'
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v6
@@ -86,7 +86,7 @@ jobs:
       - name: Assert tofu fmt status code
         run: |
           echo "::group::Check tofu fmt status code"
-          [ ${{ steps.tf-fmt.outcomes.status-code }} = ${{ matrix.status-code }} ] && exit 0 || exit 1
+          [ ${{ steps.tf-fmt.failure }} = ${{ matrix.passed }} ] && exit 0 || exit 1
           echo "::endgroup::"
 
   tf-plan-apply-no-changes:
