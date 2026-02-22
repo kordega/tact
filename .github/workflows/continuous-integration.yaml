@@ -56,7 +56,6 @@ jobs:
     runs-on: ubuntu-slim
     needs:
       - get-tofu-releases
-      - unit-setup
     strategy:
       matrix:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
@@ -85,8 +84,10 @@ jobs:
           chroot-directory: ${{ matrix.chroot-directory }}
 
       - name: Assert tofu fmt status code
-        if: steps.tf-fmt.outputs.status-code != matrix.status-code
-        run: exit 1
+        run: |
+          echo "::group::Check tofu fmt status code"
+          [ "${{ steps.tf-fmt.outcomes.status-code }}" -eq "${{ matrix.status-code }}" ] && exit 0 || exit 1
+          echo "::endgroup::"
 
   tf-plan-apply-no-changes:
     runs-on: ubuntu-slim
