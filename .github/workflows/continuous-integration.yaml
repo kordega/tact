@@ -89,12 +89,12 @@ jobs:
       matrix:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
-          - test-fixtures/fmt/fmt-passed/fmt-passed-01
-          - test-fixtures/fmt/fmt-failed/fmt-failed-01
+          - tst/fmt-passed
+          - tst/fmt-failed
         include:
-          - chroot-directory: test-fixtures/fmt/fmt-passed/fmt-passed-01
+          - chroot-directory: tst/fmt-passed
             status-code: '0'
-          - chroot-directory: test-fixtures/fmt/fmt-failed/fmt-failed-01
+          - chroot-directory: tst/fmt-failed
             status-code: '3'
     steps:
       - name: Checkout the repository
@@ -116,22 +116,16 @@ jobs:
         if: steps.tf-fmt.outputs.status-code != matrix.status-code
         run: exit 1
 
-  tofu-plan-apply:
+  unit-plan:
+    name: Units - tofu-plan
     runs-on: ubuntu-slim
+    needs: 
+      - get-tofu-releases
     strategy:
       matrix:
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
-          - test-fixtures/plan-apply/plan-apply-passed/plan-apply-passed-01
-        tofu-version:
-          - 1.11.5
-          - 1.10.9
-        include:
-          - tofu-version: 1.11.5
-            tofu-apply: 'false'
-            tofu-destroy: 'false'
-          - tofu-version: 1.10.9
-            tofu-apply: 'true'
-            tofu-destroy: 'true'
+          - tst/plan-with-changes
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v6
