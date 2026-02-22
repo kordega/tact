@@ -77,7 +77,7 @@ jobs:
           echo "::endgroup::"
 
           echo "::group::Check tofu version"
-          [ "$(tofu version -json | yq -r '.terraform_version')" = "${{ matrix.tofu-version }}" ] && exit 0 || exit 1
+          [ "$(tofu version -json | jq -r '.terraform_version')" = "${{ matrix.tofu-version }}" ] && exit 0 || exit 1
           echo "::endgroup::"
 
   tofu-test:
