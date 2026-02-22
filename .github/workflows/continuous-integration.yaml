@@ -122,6 +122,7 @@ jobs:
               ;;
             *)
               echo "Unknown chroot directory: $CHROOT_DIR"
+              echo "Expected directory name to include fmt-passed or fmt-failed"
               exit 1
               ;;
           esac
