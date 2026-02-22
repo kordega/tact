@@ -86,7 +86,7 @@ jobs:
           [ "$(tofu version -json | jq -r '.terraform_version')" = "${{ matrix.tofu-version }}" ] && exit 0 || exit 1
           echo "::endgroup::"
 
-  units-tofu-fmt:
+  unit-tofu-fmt:
     name: Units - tofu fmt
     needs:
       - get-tofu-releases
@@ -120,7 +120,7 @@ jobs:
           CHROOT_DIR: ${{ matrix.chroot-directory }}
           STATUS_CODE: ${{ steps.tf-fmt.outputs.status-code }}
         run: |
-          # tofu fmt exits 0 when formatting is clean and 3 when changes are needed
+          # tofu fmt exit codes: 0 clean, 1 usage error, 2 error, 3 formatting needed
           case "$CHROOT_DIR" in
             *fmt-passed/*)
               expected_status=0
