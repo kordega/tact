@@ -51,7 +51,7 @@ jobs:
           echo "releases=$releases" >> "$GITHUB_OUTPUT"
 
   unit-setup:
-    name: Test setup with different tofu versions
+    name: Units- tofu-setup
     needs: 
       - get-tofu-releases
     strategy:
