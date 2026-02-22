@@ -19,7 +19,7 @@ jobs:
         id: get-releases
         shell: bash
         run: |
-          releases="$(curl -s 'https://api.github.com/repos/opentofu/opentofu/releases?per_page=10' | jq -c '[.[].tag_name | sub("^v";"")]')"
+          releases="$(curl -s 'https://api.github.com/repos/opentofu/opentofu/releases?per_page=5' | jq -c '[.[].tag_name | sub("^v";"")]')"
           echo "releases=$releases" >> "$GITHUB_OUTPUT"
 
   tofu-test:
