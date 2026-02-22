@@ -81,6 +81,7 @@ jobs:
           echo "::endgroup::"
 
   unit-fmt:
+    name: Units - tofu-fmt
     runs-on: ubuntu-slim
     needs: 
       - get-tofu-releases
