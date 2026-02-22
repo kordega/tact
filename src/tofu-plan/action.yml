@@ -45,6 +45,9 @@ outputs:
   plan-has-changes:
     description: Whether the generated tf plan contains changes. Will be true if the plan contains any changes, including those that require no action, and false if the plan is empty and contains no changes.
     value: ${{ steps.tf-plan.outputs.plan-has-changes }}
+  plan-artifact-name:
+    description: The name to use for the tf plan artifact (used when upload-artifact is true).
+    value: ${{ steps.tf-plan.outputs.plan-artifact-name }}
 
 runs:
   using: "composite"
@@ -89,7 +92,7 @@ runs:
           exit "$plan_exit_code"
         fi
         echo "plan-file-path=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ github.sha }}.tfplan" >> "$GITHUB_OUTPUT"
-        echo "plan-artifact-name=tf-plan-${{ inputs.environment }}-${{ github.sha }}" >> "$GITHUB_OUTPUT"
+        echo "plan-artifact-name=tf-plan-${{ inputs.environment }}-${{ github.sha }}.tfplan" >> "$GITHUB_OUTPUT"
 
     - name: Upload tfplan as artifact
       if: ${{ inputs.upload-artifact == 'true' }}
