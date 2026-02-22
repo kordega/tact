@@ -179,3 +179,54 @@ jobs:
           chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
           plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
+
+  integration-plan:
+    name: Integration - plan and apply
+    runs-on: ubuntu-slim
+    outputs:
+      plan-has-changes: ${{ steps.tf-plan.outputs.plan-has-changes }}
+      plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
+      tofu-version: ${{ matrix.tofu-version }}
+    strategy:
+      fail-fast: true
+      matrix:
+        chroot-directory:
+          - tst/plan-with-changes
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v6
+
+      - name: Run tofu setup
+        uses: ./src/tofu-setup
+        with:
+          tofu-version: 1.11.5
+
+      - name: Run tofu plan
+        id: tf-plan
+        uses: ./src/tofu-plan
+        with:
+          chroot-directory: ${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          upload-artifact: 'true'
+
+  integration-apply-with-artifact:
+    name: Integration - apply with artifact
+    runs-on: ubuntu-slim
+    needs: 
+      - integration-plan
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v6
+
+      - name: Run tofu setup
+        uses: ./src/tofu-setup
+        with:
+          tofu-version: ${{ needs.integration-plan.outputs.tofu-version }}
+
+      - name: Run tofu apply with artifact
+        id: tf-apply-with-artifact
+        uses: ./src/tofu-apply
+        with:
+          chroot-directory: tst/plan-with-changes
+          environment: ${{ needs.integration-plan.outputs.tofu-version }}
+          plan-artifact-name: ${{ needs.integration-plan.outputs.plan-artifact-name }}

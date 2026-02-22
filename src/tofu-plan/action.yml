@@ -80,7 +80,7 @@ runs:
       shell: bash
       run: |
         echo "plan-file-path=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.tfplan" >> "$GITHUB_OUTPUT"
-        echo "plan-artifact-name=tf-plan-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.tfplan" >> "$GITHUB_OUTPUT"
+        echo "plan-artifact-name=tfplan-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.tfplan" >> "$GITHUB_OUTPUT"
 
     - name: Run tofu plan
       id: tf-plan
@@ -114,3 +114,4 @@ runs:
         name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
         path: ${{ steps.tf-plan.outputs.plan-file-path }}
         retention-days: ${{ inputs.plan-retention-days }}
+        if-no-files-found: error

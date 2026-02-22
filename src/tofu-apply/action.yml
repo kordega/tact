@@ -43,14 +43,14 @@ runs:
       uses: actions/download-artifact@v7
       with:
         name: ${{ inputs.plan-artifact-name }}
-        path: ${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ github.sha }}.tfplan
+        path: ${{ runner.temp }}
 
     - name: Set plan-file-path
       id: set-plan-file-path
       shell: bash
       run: |
         if [[ "${{ inputs.plan-artifact-name }}" != "" ]]; then
-          echo "plan-file-path=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ github.sha }}.tfplan" >> "$GITHUB_OUTPUT"
+          echo "plan-file-path=${{ steps.download-plan-artifact.outputs.download-path }}/${{ inputs.plan-artifact-name }}" >> "$GITHUB_OUTPUT"
         else
           echo "plan-file-path=${{ inputs.plan-file-path }}" >> "$GITHUB_OUTPUT"
         fi
@@ -73,4 +73,4 @@ runs:
         tofu apply \
           -auto-approve \
           -input=false \
-          "${{ steps.set-plan-file-path.outputs.plan-file-path }}"
+          ${{ steps.set-plan-file-path.outputs.plan-file-path }}
