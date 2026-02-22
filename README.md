@@ -1,1 +1,1 @@
-## tf-actions
+## tofu-actions
