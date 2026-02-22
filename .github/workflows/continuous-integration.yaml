@@ -113,6 +113,7 @@ jobs:
           CHROOT_DIR: ${{ matrix.chroot-directory }}
           STATUS_CODE: ${{ steps.tf-fmt.outputs.status-code }}
         run: |
+          # tofu fmt exits 0 when formatting is clean and 3 when changes are needed
           case "$CHROOT_DIR" in
             *fmt-passed/*)
               expected_status=0
