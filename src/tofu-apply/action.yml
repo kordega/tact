@@ -40,7 +40,7 @@ runs:
     - name: Download plan artifact if plan-artifact-name is provided
       if: ${{ inputs.plan-artifact-name != '' }}
       id: download-plan-artifact
-      uses: actions/download-artifact@v7
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
       with:
         name: ${{ inputs.plan-artifact-name }}
         path: ${{ runner.temp }}
