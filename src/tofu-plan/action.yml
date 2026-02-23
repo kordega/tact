@@ -158,10 +158,7 @@ runs:
       run: |
         echo "::group::Show plan"
         plan_output_path="${{ steps.generate-plan-filename.outputs.plan-output-path }}"
-        if ! tofu show -no-color "${{ steps.generate-plan-filename.outputs.plan-file-path }}" > "$plan_output_path"; then
-          echo "::error::Failed to render plan output."
-          exit 1
-        fi
+        tofu show -no-color "${{ steps.generate-plan-filename.outputs.plan-file-path }}" > "$plan_output_path"
         echo "plan-output-path=$plan_output_path" >> "$GITHUB_OUTPUT"
         echo "::endgroup::"
 
