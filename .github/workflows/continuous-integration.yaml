@@ -99,12 +99,14 @@ jobs:
         with:
           tofu-version: ${{ matrix.tofu-version }}
 
-      - name: Run tofu plan
-        uses: ./src/tofu-plan
-        with:
-          chroot-directory: ${{ matrix.chroot-directory }}
-          environment: ${{ matrix.tofu-version }}
-          upload-artifact: 'false'
+      - name: Run tofu init
+        working-directory: ${{ matrix.chroot-directory }}
+        shell: bash
+        run: |
+          echo "::group::Run tofu init"
+          tofu init \
+            -input=false
+          echo "::endgroup::"
 
       - name: Simulate state lock
         shell: bash
