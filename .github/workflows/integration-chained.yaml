@@ -54,8 +54,6 @@ jobs:
     runs-on: ubuntu-slim
     needs:
       - integration-chained-plan
-    env:
-      STATE_ARTIFACT_NAME: integration-chained-tfstate
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -76,7 +74,7 @@ jobs:
       - name: Upload tfstate as artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: ${{ env.STATE_ARTIFACT_NAME }}
+          name: integration-chained-tfstate
           path: |
             tst/plan-with-changes/terraform.tfstate
           retention-days: 1
@@ -88,8 +86,6 @@ jobs:
     needs:
       - integration-chained-plan
       - integration-chained-apply
-    env:
-      STATE_ARTIFACT_NAME: integration-chained-tfstate
     outputs:
       plan-artifact-name: ${{ steps.tf-plan-destroy.outputs.plan-artifact-name }}
     steps:
@@ -104,7 +100,7 @@ jobs:
       - name: Download tfstate artifact
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
-          name: ${{ env.STATE_ARTIFACT_NAME }}
+          name: integration-chained-tfstate
           path: tst/plan-with-changes
 
       - name: Run tofu plan destroy
@@ -128,8 +124,6 @@ jobs:
     needs:
       - integration-chained-plan
       - integration-chained-plan-destroy
-    env:
-      STATE_ARTIFACT_NAME: integration-chained-tfstate
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -142,7 +136,7 @@ jobs:
       - name: Download tfstate artifact
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
-          name: ${{ env.STATE_ARTIFACT_NAME }}
+          name: integration-chained-tfstate
           path: tst/plan-with-changes
 
       - name: Run tofu apply for destroy
