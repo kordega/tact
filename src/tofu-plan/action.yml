@@ -106,6 +106,7 @@ runs:
       run: |
         echo "plan-file-path=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.tfplan" >> "$GITHUB_OUTPUT"
         echo "plan-artifact-name=tfplan-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.tfplan" >> "$GITHUB_OUTPUT"
+        echo "plan-output-path=${{ runner.temp }}/tfplan-output-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.txt" >> "$GITHUB_OUTPUT"
 
     - name: Run tofu plan
       id: tf-plan
@@ -156,9 +157,8 @@ runs:
       shell: bash
       run: |
         echo "::group::Show plan"
-        plan_output_path="${{ runner.temp }}/tfplan-output-${{ steps.random-id.outputs.random-id }}.txt"
-        set -o pipefail
-        if ! tofu show -no-color "${{ steps.generate-plan-filename.outputs.plan-file-path }}" | tee "$plan_output_path"; then
+        plan_output_path="${{ steps.generate-plan-filename.outputs.plan-output-path }}"
+        if ! tofu show -no-color "${{ steps.generate-plan-filename.outputs.plan-file-path }}" > "$plan_output_path"; then
           echo "::error::Failed to render plan output."
           exit 1
         fi
