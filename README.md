@@ -9,7 +9,7 @@ Summarize a tfplan file with [`tf-summarize`](https://github.com/dineshba/tf-sum
 Example assuming you already generated a tfplan and exposed it as `steps.plan.outputs.plan-file-path` (for example with the `tf-plan` action in this repository):
 
 ```yaml
-- uses: limakzi/tofu-actions/src/tofu-plan-comment@251c73571a98b1967b8f86d4e2d0ed60d541bd7e # pin to a specific ref
+- uses: limakzi/tofu-actions/src/tofu-plan-comment@<ref> # pin to a release tag or commit
   with:
     plan-file-path: ${{ steps.plan.outputs.plan-file-path }}
 ```
