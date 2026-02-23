@@ -12,7 +12,7 @@ on:
 jobs:
   lint-actions:
     name: Lint GitHub Actions
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -136,6 +136,7 @@ jobs:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
           - tst/plan-with-changes
+        # Explicit defaults required by expressions below
         tofu-apply:
           - 'true'
         upload-artifact:
