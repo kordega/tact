@@ -22,14 +22,7 @@ updates:
     schedule:
       interval: "weekly"
   - package-ecosystem: "terraform"
-    directory: "/tst/fmt-failed"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: "terraform"
-    directory: "/tst/fmt-passed"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: "terraform"
-    directory: "/tst/plan-with-changes"
+    directories:
+      - "/tst/*"
     schedule:
       interval: "weekly"
