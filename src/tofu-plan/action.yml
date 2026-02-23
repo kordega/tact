@@ -41,6 +41,12 @@ inputs:
       Defaults to true.
     required: false
     default: "true"
+  send-to-step-summary:
+    description: |
+      Whether to send the rendered plan output to the GitHub Step Summary.
+      Accepts true/false. Defaults to true.
+    required: false
+    default: "true"
 
 outputs:
   plan-file-path:
@@ -100,6 +106,7 @@ runs:
       run: |
         echo "plan-file-path=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.tfplan" >> "$GITHUB_OUTPUT"
         echo "plan-artifact-name=tfplan-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.tfplan" >> "$GITHUB_OUTPUT"
+        echo "plan-output-path=${{ runner.temp }}/tfplan-output-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.txt" >> "$GITHUB_OUTPUT"
 
     - name: Run tofu plan
       id: tf-plan
@@ -145,17 +152,26 @@ runs:
         done
 
     - name: Show plan
+      id: show-plan
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash
       run: |
         echo "::group::Show plan"
-        plan_path="${{ steps.tf-plan.outputs.plan-file-path }}"
-        if [[ ! -f "$plan_path" ]]; then
-          echo "::error::Plan file not found at $plan_path"
-          exit 1
-        fi
-        tofu show -no-color "$plan_path"
+        tofu show -no-color "${{ steps.generate-plan-filename.outputs.plan-file-path }}" > "${{ steps.generate-plan-filename.outputs.plan-output-path }}"
+        echo "plan-output-path=${{ steps.generate-plan-filename.outputs.plan-output-path }}" >> "$GITHUB_OUTPUT"
         echo "::endgroup::"
+
+    - name: Add plan to step summary
+      if: ${{ inputs.send-to-step-summary == 'true' }}
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        {
+          echo "## ${{ inputs.environment }}"
+          echo '```'
+          cat "${{ steps.show-plan.outputs.plan-output-path }}"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Upload tfplan as artifact
       if: ${{ inputs.upload-artifact == 'true' }}
