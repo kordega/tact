@@ -52,12 +52,12 @@ outputs:
   plan-file-path:
     description: The path to the generated tf-plan file.
     value: ${{ steps.tf-plan.outputs.plan-file-path }}
-  plan-has-changes:
-    description: Whether the generated tf plan contains changes. Will be true if the plan contains any changes, including those that require no action, and false if the plan is empty and contains no changes.
-    value: ${{ steps.tf-plan.outputs.plan-has-changes }}
   plan-artifact-name:
     description: The name to use for the tf plan artifact (used when upload-artifact is true).
     value: ${{ steps.tf-plan.outputs.plan-artifact-name }}
+  plan-has-changes:
+    description: Whether the generated tf plan contains changes. Will be true if the plan contains any changes, including those that require no action, and false if the plan is empty and contains no changes.
+    value: ${{ steps.tf-plan.outputs.plan-has-changes }}
   plan-add-count:
     description: Number of resources the plan will add.
     value: ${{ steps.tf-plan.outputs.plan-add-count }}
@@ -67,12 +67,12 @@ outputs:
   plan-destroy-count:
     description: Number of resources the plan will destroy.
     value: ${{ steps.tf-plan.outputs.plan-destroy-count }}
-  plan-replace-count:
-    description: Number of resources the plan will replace.
-    value: ${{ steps.tf-plan.outputs.plan-replace-count }}
   plan-import-count:
     description: Number of resources the plan will import.
     value: ${{ steps.tf-plan.outputs.plan-import-count }}
+  plan-replace-count:
+    description: Number of resources the plan will replace.
+    value: ${{ steps.tf-plan.outputs.plan-replace-count }}
 
 runs:
   using: "composite"
