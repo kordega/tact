@@ -183,8 +183,8 @@ runs:
           exit 1
         fi
         if [[ ! -f "$PLAN_OUTPUT_PATH" ]]; then
-          PLAN_OUTPUT_PATH="$(mktemp)"
-          tofu show -no-color "$PLAN_PATH" > "$PLAN_OUTPUT_PATH"
+          echo "::error::Plan output not found at $PLAN_OUTPUT_PATH"
+          exit 1
         fi
         {
           echo "### Tofu plan"
