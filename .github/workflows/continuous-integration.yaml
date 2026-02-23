@@ -89,7 +89,7 @@ jobs:
       matrix:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
-          - tst/plan-with-changes
+          - tst/unlock-state
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -98,6 +98,46 @@ jobs:
         uses: ./src/tofu-setup
         with:
           tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Start HTTP state server
+        shell: bash
+        run: |
+          cat > /tmp/state-server.py << 'PYEOF'
+          import http.server, json
+          lock = [b""]
+          state = [b""]
+          class H(http.server.BaseHTTPRequestHandler):
+              def do_GET(self):
+                  self.send_response(200 if state[0] else 204)
+                  self.end_headers()
+                  if state[0]:
+                      self.wfile.write(state[0])
+              def do_POST(self):
+                  n = int(self.headers.get("Content-Length", 0))
+                  state[0] = self.rfile.read(n)
+                  self.send_response(200)
+                  self.end_headers()
+              def do_LOCK(self):
+                  if lock[0]:
+                      self.send_response(423)
+                      self.send_header("Content-Type", "application/json")
+                      self.end_headers()
+                      self.wfile.write(lock[0])
+                  else:
+                      n = int(self.headers.get("Content-Length", 0))
+                      lock[0] = self.rfile.read(n)
+                      self.send_response(200)
+                      self.end_headers()
+              def do_UNLOCK(self):
+                  lock[0] = b""
+                  self.send_response(200)
+                  self.end_headers()
+              def log_message(self, *a):
+                  pass
+          http.server.HTTPServer(("127.0.0.1", 18080), H).serve_forever()
+          PYEOF
+          nohup python3 /tmp/state-server.py > /tmp/state-server.log 2>&1 &
+          sleep 1
 
       - name: Run tofu init
         working-directory: ${{ matrix.chroot-directory }}
@@ -109,11 +149,12 @@ jobs:
           echo "::endgroup::"
 
       - name: Simulate state lock
-        working-directory: ${{ matrix.chroot-directory }}
         shell: bash
         run: |
-          echo '{"ID":"test-lock-id","Operation":"OperationTypeApply","Info":"","Who":"test@localhost","Version":"${{ matrix.tofu-version }}","Created":"2024-01-01T00:00:00.000000Z","Path":"terraform.tfstate"}' \
-            > terraform.tfstate.lock.info
+          curl -sf -X LOCK \
+            -H "Content-Type: application/json" \
+            -d '{"ID":"test-lock-id","Operation":"OperationTypeApply","Info":"","Who":"test@localhost","Version":"${{ matrix.tofu-version }}","Created":"2024-01-01T00:00:00.000000Z","Path":"terraform.tfstate"}' \
+            http://127.0.0.1:18080/state
 
       - name: Run tofu unlock-state
         uses: ./src/tofu-unlock-state
@@ -122,10 +163,14 @@ jobs:
           lock-id: test-lock-id
 
       - name: Assert state lock has been removed
-        working-directory: ${{ matrix.chroot-directory }}
         shell: bash
         run: |
-          [ ! -f "terraform.tfstate.lock.info" ] && exit 0 || exit 1
+          response=$(curl -s -X LOCK \
+            -H "Content-Type: application/json" \
+            -d '{"ID":"verify-lock","Operation":"OperationTypePlan","Info":"","Who":"ci@test","Version":"${{ matrix.tofu-version }}","Created":"2024-01-01T00:00:00.000000Z","Path":"terraform.tfstate"}' \
+            -o /dev/null -w "%{http_code}" \
+            http://127.0.0.1:18080/state)
+          [ "$response" = "200" ] && exit 0 || exit 1
 
   unit-fmt:
     name: Units - tofu-fmt
