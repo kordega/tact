@@ -119,6 +119,11 @@ jobs:
           chroot-directory: ${{ matrix.chroot-directory }}
           lock-id: test-lock-id
 
+      - name: Assert state lock has been removed
+        shell: bash
+        run: |
+          [ ! -f "${{ matrix.chroot-directory }}/terraform.tfstate.lock.info" ] && exit 0 || exit 1
+
   unit-fmt:
     name: Units - tofu-fmt
     runs-on: ubuntu-slim
