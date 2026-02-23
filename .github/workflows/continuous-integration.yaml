@@ -97,26 +97,25 @@ jobs:
         with:
           tofu-version: ${{ matrix.tofu-version }}
 
-      - name: Run tofu init
-        working-directory: tst/plan-with-changes
+      - name: Run tofu plan
+        uses: ./src/tofu-plan
+        with:
+          chroot-directory: tst/plan-with-changes
+          environment: ${{ matrix.tofu-version }}
+          upload-artifact: 'false'
+
+      - name: Simulate state lock
         shell: bash
         run: |
-          tofu init \
-            -input=false \
-            -backend=false
+          echo '{"ID":"test-lock-id","Operation":"OperationTypeApply","Info":"","Who":"test@localhost","Version":"${{ matrix.tofu-version }}","Created":"2024-01-01T00:00:00.000000Z","Path":"terraform.tfstate"}' \
+            > tst/plan-with-changes/terraform.tfstate.lock.info
 
       - name: Run tofu unlock-state
         id: tf-unlock-state
         uses: ./src/tofu-unlock-state
-        continue-on-error: true
         with:
           chroot-directory: tst/plan-with-changes
           lock-id: test-lock-id
-
-      - name: Assert tofu unlock-state failed with lock not found
-        shell: bash
-        run: |
-          [ "${{ steps.tf-unlock-state.outcome }}" = "failure" ] && exit 0 || exit 1
 
   unit-fmt:
     name: Units - tofu-fmt
