@@ -41,6 +41,12 @@ inputs:
       Defaults to true.
     required: false
     default: "true"
+  send-to-step-summary:
+    description: |
+      Whether to send the generated tf plan to the GitHub Step Summary. 
+      Defaults to false.
+    required: false
+    default: "false"
 
 outputs:
   plan-file-path:
@@ -154,7 +160,16 @@ runs:
           echo "::error::Plan file not found at $plan_path"
           exit 1
         fi
-        tofu show -no-color "$plan_path"
+        plan_output="$(tofu show -no-color "$plan_path")"
+        printf '%s\n' "$plan_output"
+        if [[ "${{ inputs.send-to-step-summary }}" == "true" && -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+          {
+            echo "### Tofu plan"
+            echo '```'
+            printf '%s\n' "$plan_output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+        fi
         echo "::endgroup::"
 
     - name: Upload tfplan as artifact
