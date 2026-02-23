@@ -44,7 +44,7 @@ inputs:
   send-to-step-summary:
     description: |
       Whether to send the generated tf plan to the GitHub Step Summary. 
-      Accepts yes/true to enable. Defaults to yes.
+      Accepts yes/true (case-insensitive) to enable; any other value disables. Defaults to yes.
     required: false
     default: "yes"
 
@@ -171,7 +171,7 @@ runs:
         echo "::endgroup::"
 
     - name: Add plan to step summary
-      if: ${{ inputs.send-to-step-summary == 'yes' || inputs.send-to-step-summary == 'true' }}
+      if: ${{ inputs.send-to-step-summary == 'yes' || inputs.send-to-step-summary == 'true' || inputs.send-to-step-summary == 'Yes' || inputs.send-to-step-summary == 'True' || inputs.send-to-step-summary == 'YES' || inputs.send-to-step-summary == 'TRUE' }}
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash
       env:
