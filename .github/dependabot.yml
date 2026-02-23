@@ -4,7 +4,7 @@ updates:
   - package-ecosystem: "github-actions"
     directories:
       - "/.github/workflows"
-      - "/src/tofu-*"
+      - "/src/*"
     schedule:
       interval: "weekly"
   - package-ecosystem: "terraform"
