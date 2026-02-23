@@ -326,6 +326,9 @@ jobs:
   integration-chained-plan:
     name: Integration - chained plan
     runs-on: ubuntu-slim
+    permissions:
+      contents: read
+      actions: write
     outputs:
       plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
       tofu-version: ${{ matrix.tofu-version }}
@@ -364,6 +367,9 @@ jobs:
     runs-on: ubuntu-slim
     needs:
       - integration-chained-plan
+    permissions:
+      contents: read
+      actions: write
     env:
       STATE_ARTIFACT_NAME: integration-chained-tfstate
     steps:
@@ -398,6 +404,9 @@ jobs:
     needs:
       - integration-chained-plan
       - integration-chained-apply
+    permissions:
+      contents: read
+      actions: write
     env:
       STATE_ARTIFACT_NAME: integration-chained-tfstate
     outputs:
@@ -438,6 +447,9 @@ jobs:
     needs:
       - integration-chained-plan
       - integration-chained-plan-destroy
+    permissions:
+      contents: read
+      actions: write
     env:
       STATE_ARTIFACT_NAME: integration-chained-tfstate
     steps:
