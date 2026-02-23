@@ -160,17 +160,30 @@ runs:
           echo "::error::Plan file not found at $plan_path"
           exit 1
         fi
-        plan_output="$(tofu show -no-color "$plan_path")"
-        printf '%s\n' "$plan_output"
-        if [[ "${{ inputs.send-to-step-summary }}" == "true" && -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
-          {
-            echo "### Tofu plan"
-            echo '```'
-            printf '%s\n' "$plan_output"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-        fi
+        tofu show -no-color "$plan_path"
         echo "::endgroup::"
+
+    - name: Add plan to step summary
+      if: ${{ inputs.send-to-step-summary == 'true' }}
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      env:
+        PLAN_PATH: ${{ steps.tf-plan.outputs.plan-file-path }}
+      run: |
+        if [[ -z "${GITHUB_STEP_SUMMARY:-}" ]]; then
+          echo "GITHUB_STEP_SUMMARY not set; skipping."
+          exit 0
+        fi
+        if [[ ! -f "$PLAN_PATH" ]]; then
+          echo "::error::Plan file not found at $PLAN_PATH"
+          exit 1
+        fi
+        {
+          echo "### Tofu plan"
+          echo '```'
+          tofu show -no-color "$PLAN_PATH"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Upload tfplan as artifact
       if: ${{ inputs.upload-artifact == 'true' }}
