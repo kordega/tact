@@ -9,26 +9,9 @@ on:
   pull_request:
     branches: [ '**' ]
 
-permissions:
-  contents: read
-  actions: read
-
 jobs:
-  lint-actions:
-    name: Lint GitHub Actions
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout the repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Run actionlint
-        uses: rhysd/actionlint@393031adb9afb225ee52ae2ccd7a5af5525e03e8 # v1.7.11
-
   get-tofu-releases:
     name: Get tofu minor releases
-    permissions:
-      contents: read
-      actions: write
     runs-on: ubuntu-slim
     outputs:
       releases: ${{ steps.read-releases.outputs.releases }}
@@ -158,7 +141,7 @@ jobs:
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
-          upload-artifact: 'false'
+          upload-artifact: ${{ matrix.upload-artifact }}
 
       - name: Assert tofu plan change counts
         shell: bash
@@ -173,23 +156,35 @@ jobs:
       - name: Run tofu apply without artifact
         id: tf-apply-no-artifact
         uses: ./src/tofu-apply
+        if: matrix.tofu-apply == 'true' && matrix.upload-artifact == 'false'
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
           plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
 
-      - name: Run tofu plan for destroy test fixture
-        id: tf-plan-destroy
-        uses: ./src/tofu-plan
+      - name: Run tofu apply with artifact
+        id: tf-apply-with-artifact
+        uses: ./src/tofu-apply
+        if: matrix.tofu-apply == 'true' && matrix.upload-artifact == 'true'
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
-          tofu-destroy: 'true'
-          upload-artifact: 'false'
+          plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
+
+      - name: Run tofu plan for destroy test fixture
+        id: tf-plan-destroy
+        uses: ./src/tofu-plan
+        if: matrix.tofu-destroy == 'true'
+        with:
+          chroot-directory: ${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          tofu-destroy: '${{ matrix.tofu-destroy }}'
+          upload-artifact: '${{ matrix.upload-artifact }}'
 
       - name: Run tofu apply for destroy test fixture
         id: tf-apply-destroy
         uses: ./src/tofu-apply
+        if: matrix.tofu-destroy == 'true'
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
@@ -248,9 +243,6 @@ jobs:
 
   integration-plan:
     name: Integration - plan and apply
-    permissions:
-      contents: read
-      actions: write
     runs-on: ubuntu-slim
     outputs:
       plan-has-changes: ${{ steps.tf-plan.outputs.plan-has-changes }}
@@ -288,9 +280,6 @@ jobs:
 
   integration-apply-with-artifact:
     name: Integration - apply with artifact
-    permissions:
-      contents: read
-      actions: write
     runs-on: ubuntu-slim
     needs: 
       - integration-plan
