@@ -88,6 +88,8 @@ jobs:
     strategy:
       matrix:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
+        chroot-directory:
+          - tst/plan-with-changes
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -100,7 +102,7 @@ jobs:
       - name: Run tofu plan
         uses: ./src/tofu-plan
         with:
-          chroot-directory: tst/plan-with-changes
+          chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
           upload-artifact: 'false'
 
@@ -108,13 +110,13 @@ jobs:
         shell: bash
         run: |
           echo '{"ID":"test-lock-id","Operation":"OperationTypeApply","Info":"","Who":"test@localhost","Version":"${{ matrix.tofu-version }}","Created":"2024-01-01T00:00:00.000000Z","Path":"terraform.tfstate"}' \
-            > tst/plan-with-changes/terraform.tfstate.lock.info
+            > ${{ matrix.chroot-directory }}/terraform.tfstate.lock.info
 
       - name: Run tofu unlock-state
         id: tf-unlock-state
         uses: ./src/tofu-unlock-state
         with:
-          chroot-directory: tst/plan-with-changes
+          chroot-directory: ${{ matrix.chroot-directory }}
           lock-id: test-lock-id
 
   unit-fmt:
