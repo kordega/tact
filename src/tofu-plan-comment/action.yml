@@ -24,6 +24,10 @@ inputs:
     description: GitHub token to use when posting the pull-request comment. Defaults to GITHUB_TOKEN.
     required: false
     default: ""
+  tf-summarize-version:
+    description: Version of tf-summarize to install.
+    required: false
+    default: "v0.3.16"
 
 outputs:
   summary-file-path:
@@ -76,7 +80,7 @@ runs:
       shell: bash
       run: |
         echo "::group::Install tf-summarize"
-        go install github.com/dineshba/tf-summarize@v0.3.16
+        go install github.com/dineshba/tf-summarize@${{ inputs.tf-summarize-version }}
         echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
         echo "::endgroup::"
 
@@ -85,11 +89,6 @@ runs:
       shell: bash
       run: |
         plan_path="${{ steps.set-plan-file-path.outputs.plan-file-path }}"
-        if [[ ! -f "$plan_path" ]]; then
-          echo "::error::Plan file not found at $plan_path"
-          exit 1
-        fi
-
         summary_path="${{ runner.temp }}/tfplan-summary.md"
         tf-summarize -md "$plan_path" > "$summary_path"
 
