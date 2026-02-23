@@ -180,6 +180,40 @@ jobs:
           environment: ${{ matrix.tofu-version }}
           plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
 
+  unit-taint:
+    name: Units - tofu-taint
+    runs-on: ubuntu-slim
+    needs:
+      - get-tofu-releases
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
+        chroot-directory:
+          - tst/taint-resource
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./src/tofu-setup
+        with:
+          tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Run tofu init and apply to create state
+        working-directory: ${{ matrix.chroot-directory }}
+        shell: bash
+        run: |
+          tofu init -input=false
+          tofu apply -auto-approve -input=false
+
+      - name: Run tofu taint
+        uses: ./src/tofu-taint
+        with:
+          chroot-directory: ${{ matrix.chroot-directory }}
+          address: time_static.this
+
   integration-plan:
     name: Integration - plan and apply
     runs-on: ubuntu-slim

@@ -1,0 +1,36 @@
+---
+name: tf-taint
+description: Taint a resource using tofu
+author: Kamil Zabielski
+
+branding:
+  icon: git-merge
+  color: gray-dark
+
+inputs:
+  chroot-directory:
+    description: Directory to chroot into before running tofu taint
+    required: false
+    default: "."
+  address:
+    description: The address of the resource to taint
+    required: true
+  allow-missing:
+    description: |
+      If specified, the command will succeed even if the resource is missing.
+      Defaults to false.
+    required: false
+    default: "false"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run tofu taint
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        echo "::group::Run tofu taint"
+        tofu taint \
+          -allow-missing=${{ inputs.allow-missing }} \
+          "${{ inputs.address }}"
+        echo "::endgroup::"
