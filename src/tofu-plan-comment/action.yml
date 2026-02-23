@@ -1,0 +1,111 @@
+---
+name: tf-plan-comment
+description: Summarize a tfplan file with tf-summarize and post it as a pull-request comment
+author: Kamil Zabielski
+
+branding:
+  icon: message-square
+  color: gray-dark
+
+inputs:
+  plan-file-path:
+    description: The path to the tf plan file to summarize. One of plan-file-path or plan-artifact-name must be provided.
+    required: false
+    default: ""
+  plan-artifact-name:
+    description: The name of the GitHub Actions artifact containing the tf plan file to summarize. Takes precedence over plan-file-path if both are provided.
+    required: false
+    default: ""
+  comment-header:
+    description: Heading text prepended to the pull-request comment.
+    required: false
+    default: "## OpenTofu Plan Summary"
+  github-token:
+    description: GitHub token to use when posting the pull-request comment. Defaults to GITHUB_TOKEN.
+    required: false
+    default: ""
+
+outputs:
+  summary-file-path:
+    description: The path to the generated tf-summarize markdown output.
+    value: ${{ steps.generate-summary.outputs.summary-file-path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Ensure pull request context
+      if: ${{ github.event.pull_request == null }}
+      shell: bash
+      run: |
+        echo "::error::This action must run in the context of a pull request."
+        exit 1
+
+    - name: Either plan-file-path or plan-artifact-name must be provided
+      if: ${{ inputs.plan-file-path == '' && inputs.plan-artifact-name == '' }}
+      shell: bash
+      run: |
+        echo "::error::Either plan-file-path or plan-artifact-name must be provided"
+        exit 1
+
+    - name: Only one of plan-file-path or plan-artifact-name must be provided
+      if: ${{ inputs.plan-file-path != '' && inputs.plan-artifact-name != '' }}
+      shell: bash
+      run: |
+        echo "::error::Only one of plan-file-path or plan-artifact-name must be provided"
+        exit 1
+
+    - name: Download plan artifact if plan-artifact-name is provided
+      if: ${{ inputs.plan-artifact-name != '' }}
+      id: download-plan-artifact
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+      with:
+        name: ${{ inputs.plan-artifact-name }}
+        path: ${{ runner.temp }}
+
+    - name: Set plan-file-path
+      id: set-plan-file-path
+      shell: bash
+      run: |
+        if [[ "${{ inputs.plan-artifact-name }}" != "" ]]; then
+          echo "plan-file-path=${{ steps.download-plan-artifact.outputs.download-path }}/${{ inputs.plan-artifact-name }}" >> "$GITHUB_OUTPUT"
+        else
+          echo "plan-file-path=${{ inputs.plan-file-path }}" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Install tf-summarize
+      shell: bash
+      run: |
+        echo "::group::Install tf-summarize"
+        go install github.com/dineshba/tf-summarize@v0.3.16
+        echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+        echo "::endgroup::"
+
+    - name: Generate tf plan summary
+      id: generate-summary
+      shell: bash
+      run: |
+        plan_path="${{ steps.set-plan-file-path.outputs.plan-file-path }}"
+        if [[ ! -f "$plan_path" ]]; then
+          echo "::error::Plan file not found at $plan_path"
+          exit 1
+        fi
+
+        summary_path="${{ runner.temp }}/tfplan-summary.md"
+        tf-summarize -md "$plan_path" > "$summary_path"
+
+        echo "summary-file-path=$summary_path" >> "$GITHUB_OUTPUT"
+        {
+          echo "summary<<'EOF'"
+          cat "$summary_path"
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Comment pull request with plan summary
+      uses: thollander/actions-comment-pull-request@24bffb9b452ba05a4f3f77933840a6a841d1b32b # v3
+      with:
+        message: |
+          ${{ inputs.comment-header }}
+
+          ${{ steps.generate-summary.outputs.summary }}
+        pr_number: ${{ github.event.pull_request.number }}
+        GITHUB_TOKEN: ${{ inputs.github-token != '' && inputs.github-token || github.token }}
