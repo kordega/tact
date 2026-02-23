@@ -176,12 +176,12 @@ runs:
       shell: bash
       env:
         PLAN_PATH: ${{ steps.tf-plan.outputs.plan-file-path }}
-        PLAN_OUTPUT_PATH: ${{ steps.show-plan.outputs.plan-output-path }}
+        STEP_SUMMARY_PLAN_OUTPUT_PATH: ${{ steps.show-plan.outputs.plan-output-path }}
       run: |
         {
           echo "## ${{ inputs.environment }}"
           echo '```'
-          cat "$PLAN_OUTPUT_PATH"
+          cat "$STEP_SUMMARY_PLAN_OUTPUT_PATH"
           echo '```'
         } >> "$GITHUB_STEP_SUMMARY"
 
