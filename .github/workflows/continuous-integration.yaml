@@ -136,7 +136,7 @@ jobs:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
           - tst/plan-with-changes
-        # Matrix syntax requires list values; these string defaults satisfy expressions and allow future combinations
+        # Matrix vars used in expressions must be defined as lists for actionlint; these string defaults cover the single combination
         tofu-apply:
           - 'true'
         upload-artifact:
