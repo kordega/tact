@@ -1,5 +1,5 @@
 ---
-name: tf-plan-comment
+name: tofu-plan-comment
 description: Summarize a tfplan file with tf-summarize and post it as a pull-request comment
 author: Kamil Zabielski
 
