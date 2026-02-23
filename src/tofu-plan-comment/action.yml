@@ -9,11 +9,11 @@ branding:
 
 inputs:
   plan-file-path:
-    description: The path to the tf plan file to summarize. One of plan-file-path or plan-artifact-name must be provided.
+    description: The path to the tf plan file to summarize. One of plan-file-path or plan-artifact-name must be provided, but not both.
     required: false
     default: ""
   plan-artifact-name:
-    description: The name of the GitHub Actions artifact containing the tf plan file to summarize. Takes precedence over plan-file-path if both are provided.
+    description: The name of the GitHub Actions artifact containing the tf plan file to summarize. Mutually exclusive with plan-file-path.
     required: false
     default: ""
   comment-header:
