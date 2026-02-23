@@ -52,6 +52,21 @@ outputs:
   plan-artifact-name:
     description: The name to use for the tf plan artifact (used when upload-artifact is true).
     value: ${{ steps.tf-plan.outputs.plan-artifact-name }}
+  plan-add-count:
+    description: Number of resources the plan will add.
+    value: ${{ steps.tf-plan.outputs.plan-add-count }}
+  plan-change-count:
+    description: Number of resources the plan will change in-place.
+    value: ${{ steps.tf-plan.outputs.plan-change-count }}
+  plan-destroy-count:
+    description: Number of resources the plan will destroy.
+    value: ${{ steps.tf-plan.outputs.plan-destroy-count }}
+  plan-replace-count:
+    description: Number of resources the plan will replace.
+    value: ${{ steps.tf-plan.outputs.plan-replace-count }}
+  plan-import-count:
+    description: Number of resources the plan will import.
+    value: ${{ steps.tf-plan.outputs.plan-import-count }}
 
 runs:
   using: "composite"
@@ -110,6 +125,24 @@ runs:
         fi
         echo "plan-file-path=${{ steps.generate-plan-filename.outputs.plan-file-path }}" >> "$GITHUB_OUTPUT"
         echo "plan-artifact-name=${{ steps.generate-plan-filename.outputs.plan-artifact-name }}" >> "$GITHUB_OUTPUT"
+
+        tofu show -json "${{ steps.generate-plan-filename.outputs.plan-file-path }}" | jq -r '
+          ( .resource_changes // [] )
+          | reduce (.[] | .change // {}) as $change (
+              {"plan-add-count":0, "plan-change-count":0, "plan-destroy-count":0, "plan-replace-count":0, "plan-import-count":0};
+              ($change.actions // []) as $actions
+              | if (($actions | index("create")) and ($actions | index("delete"))) or ($actions | index("replace")) then ."plan-replace-count" += 1
+                elif ($change.importing != null) or ($actions | index("import")) then ."plan-import-count" += 1
+                elif ($actions | index("create")) then ."plan-add-count" += 1
+                elif ($actions | index("update")) then ."plan-change-count" += 1
+                elif ($actions | index("delete")) then ."plan-destroy-count" += 1
+                else . end
+            )
+          | to_entries[]
+          | "\(.key)=\(.value)"
+        ' | while IFS= read -r line; do
+          echo "$line" >> "$GITHUB_OUTPUT"
+        done
 
     - name: Upload tfplan as artifact
       if: ${{ inputs.upload-artifact == 'true' }}
