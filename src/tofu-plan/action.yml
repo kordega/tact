@@ -43,7 +43,7 @@ inputs:
     default: "true"
   send-to-step-summary:
     description: |
-      Whether to send the generated tf plan to the GitHub Step Summary. 
+      Whether to send the rendered plan output to the GitHub Step Summary.
       Accepts true/false. Defaults to true.
     required: false
     default: "true"
