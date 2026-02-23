@@ -1,5 +1,5 @@
 ---
-name: Integration Chained
+name: Continuous Integration
 run-name: integration-chained-${{ github.event_name == 'pull_request' && github.event.number || github.run_number }}
 
 on:
