@@ -1,5 +1,5 @@
 ---
-name: tf-plan
+name: tofu-plan
 description: Run tofu plan
 author: Kamil Zabielski
 
