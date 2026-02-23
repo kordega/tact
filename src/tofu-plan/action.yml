@@ -178,14 +178,6 @@ runs:
         PLAN_PATH: ${{ steps.tf-plan.outputs.plan-file-path }}
         PLAN_OUTPUT_PATH: ${{ steps.show-plan.outputs.plan-output-path }}
       run: |
-        if [[ ! -f "$PLAN_PATH" ]]; then
-          echo "::error::Plan file not found at $PLAN_PATH"
-          exit 1
-        fi
-        if [[ ! -r "$PLAN_OUTPUT_PATH" ]]; then
-          echo "::error::Plan output not found or unreadable at $PLAN_OUTPUT_PATH"
-          exit 1
-        fi
         {
           echo "## ${{ inputs.environment }}"
           echo '```'
