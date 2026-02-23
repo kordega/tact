@@ -175,7 +175,7 @@ runs:
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash
       env:
-        PLAN_PATH: ${{ steps.tf-plan.outputs.plan-file-path }}
+
         STEP_SUMMARY_PLAN_OUTPUT_PATH: ${{ steps.show-plan.outputs.plan-output-path }}
       run: |
         {
