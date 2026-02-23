@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Restore cached releases
         id: cache-releases
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: .cache/tofu-releases.json
           key: tofu-releases-v1
@@ -61,7 +61,7 @@ jobs:
     runs-on: ubuntu-slim
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Run tofu setup
         uses: ./src/tofu-setup
@@ -98,7 +98,7 @@ jobs:
             status-code: '3'
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Run tofu setup
         uses: ./src/tofu-setup
@@ -128,7 +128,7 @@ jobs:
           - tst/plan-with-changes
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Run tofu setup
         uses: ./src/tofu-setup
@@ -194,7 +194,7 @@ jobs:
           - tst/plan-with-changes
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Run tofu setup
         uses: ./src/tofu-setup
@@ -216,7 +216,7 @@ jobs:
       - integration-plan
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Run tofu setup
         uses: ./src/tofu-setup

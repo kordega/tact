@@ -109,7 +109,7 @@ runs:
 
     - name: Upload tfplan as artifact
       if: ${{ inputs.upload-artifact == 'true' }}
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
       with:
         name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
         path: ${{ steps.tf-plan.outputs.plan-file-path }}

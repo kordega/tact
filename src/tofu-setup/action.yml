@@ -43,7 +43,7 @@ runs:
   using: "composite"
   steps:
     - name: Install tofu-cli
-      uses: opentofu/setup-opentofu@v1
+      uses: opentofu/setup-opentofu@9d84900f3238fab8cd84ce47d658d25dd008be2f # v1
       with:
         github_token: ${{ inputs.github-token }}
         cli_config_credentials_hostname: ${{ inputs.cli-config-credentials-hostname }}
