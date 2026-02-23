@@ -389,6 +389,7 @@ jobs:
           name: ${{ env.STATE_ARTIFACT_NAME }}
           path: |
             tst/plan-with-changes/terraform.tfstate
+          retention-days: 1
           if-no-files-found: error
 
   integration-chained-plan-destroy:
