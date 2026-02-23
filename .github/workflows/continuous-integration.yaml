@@ -143,6 +143,16 @@ jobs:
           environment: ${{ matrix.tofu-version }}
           upload-artifact: ${{ matrix.upload-artifact }}
 
+      - name: Assert tofu plan change counts
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "${{ steps.tf-plan.outputs.plan-add-count }}" = "1" ]
+          [ "${{ steps.tf-plan.outputs.plan-change-count }}" = "0" ]
+          [ "${{ steps.tf-plan.outputs.plan-destroy-count }}" = "0" ]
+          [ "${{ steps.tf-plan.outputs.plan-replace-count }}" = "0" ]
+          [ "${{ steps.tf-plan.outputs.plan-import-count }}" = "0" ]
+
       - name: Run tofu apply without artifact
         id: tf-apply-no-artifact
         uses: ./src/tofu-apply
