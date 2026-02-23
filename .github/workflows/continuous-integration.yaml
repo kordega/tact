@@ -106,12 +106,25 @@ jobs:
         shell: bash
         run: |
           curl -fsSL https://dl.min.io/server/minio/release/linux-amd64/minio \
-            -o /tmp/minio
-          chmod +x /tmp/minio
-          MINIO_ROOT_USER=minioadmin MINIO_ROOT_PASSWORD=minioadmin \
-            nohup /tmp/minio server /tmp/minio-data \
-            --address 127.0.0.1:9000 \
-            > /tmp/minio.log 2>&1 &
+            -o /usr/local/bin/minio
+          chmod +x /usr/local/bin/minio
+          cat > /etc/systemd/system/minio.service << 'EOF'
+          [Unit]
+          Description=MinIO Object Storage
+          After=network.target
+
+          [Service]
+          Type=simple
+          Environment=MINIO_ROOT_USER=minioadmin
+          Environment=MINIO_ROOT_PASSWORD=minioadmin
+          ExecStart=/usr/local/bin/minio server /tmp/minio-data --address 127.0.0.1:9000
+          Restart=on-failure
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          systemctl daemon-reload
+          systemctl start minio
           for i in $(seq 1 30); do
             curl -sf http://127.0.0.1:9000/minio/health/live && break
             sleep 1
