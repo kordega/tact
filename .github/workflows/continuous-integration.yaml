@@ -136,7 +136,7 @@ jobs:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
           - tst/plan-with-changes
-        # Explicit defaults required by expressions below
+        # Explicit string defaults required by expressions below
         tofu-apply:
           - 'true'
         upload-artifact:
