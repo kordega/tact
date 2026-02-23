@@ -157,9 +157,8 @@ runs:
       shell: bash
       run: |
         echo "::group::Show plan"
-        plan_output_path="${{ steps.generate-plan-filename.outputs.plan-output-path }}"
-        tofu show -no-color "${{ steps.generate-plan-filename.outputs.plan-file-path }}" > "$plan_output_path"
-        echo "plan-output-path=$plan_output_path" >> "$GITHUB_OUTPUT"
+        tofu show -no-color "${{ steps.generate-plan-filename.outputs.plan-file-path }}" > "${{ steps.generate-plan-filename.outputs.plan-output-path }}"
+        echo "plan-output-path=${{ steps.generate-plan-filename.outputs.plan-output-path }}" >> "$GITHUB_OUTPUT"
         echo "::endgroup::"
 
     - name: Add plan to step summary
