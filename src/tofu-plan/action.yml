@@ -144,6 +144,19 @@ runs:
           echo "$line" >> "$GITHUB_OUTPUT"
         done
 
+    - name: Show plan
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        echo "::group::Show plan"
+        plan_path="${{ steps.tf-plan.outputs.plan-file-path }}"
+        if [[ ! -f "$plan_path" ]]; then
+          echo "::error::Plan file not found at $plan_path"
+          exit 1
+        fi
+        tofu show -no-color "$plan_path"
+        echo "::endgroup::"
+
     - name: Upload tfplan as artifact
       if: ${{ inputs.upload-artifact == 'true' }}
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
