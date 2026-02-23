@@ -32,9 +32,9 @@ inputs:
   plan-retention-days:
     description: |
       Number of days to retain the generated tf plan file. 
-      Defaults to 7.
+      Defaults to 1.
     required: false
-    default: "7"
+    default: "1"
   upload-artifact:
     description: |
       Whether to upload the generated tf plan file as a GitHub Actions artifact. 
