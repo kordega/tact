@@ -2,21 +2,17 @@ version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/.github/workflows"
-    schedule:
+    schedule: &weekly-actions-schedule
       interval: "weekly"
   - package-ecosystem: "github-actions"
     directory: "/src/tofu-apply"
-    schedule:
-      interval: "weekly"
+    schedule: *weekly-actions-schedule
   - package-ecosystem: "github-actions"
     directory: "/src/tofu-fmt"
-    schedule:
-      interval: "weekly"
+    schedule: *weekly-actions-schedule
   - package-ecosystem: "github-actions"
     directory: "/src/tofu-plan"
-    schedule:
-      interval: "weekly"
+    schedule: *weekly-actions-schedule
   - package-ecosystem: "github-actions"
     directory: "/src/tofu-setup"
-    schedule:
-      interval: "weekly"
+    schedule: *weekly-actions-schedule
