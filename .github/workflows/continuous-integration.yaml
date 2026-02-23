@@ -93,20 +93,6 @@ jobs:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases-with-lockfile) }}
         chroot-directory:
           - tst/unlock-state
-    services:
-      minio:
-        image: minio/minio
-        ports:
-          - 9000:9000
-        env:
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadmin
-          MINIO_VOLUMES: /data
-        options: >-
-          --health-cmd "curl -sf http://localhost:9000/minio/health/live"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -115,6 +101,19 @@ jobs:
         uses: ./src/tofu-setup
         with:
           tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Start MinIO
+        shell: bash
+        run: |
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio server /data
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:9000/minio/health/live && break
+            sleep 1
+          done
 
       - name: Create S3 bucket
         env:
