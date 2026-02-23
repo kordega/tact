@@ -21,3 +21,8 @@ updates:
     directory: "/src/tofu-setup"
     schedule:
       interval: "weekly"
+  - package-ecosystem: "terraform"
+    directories:
+      - "/tst/*"
+    schedule:
+      interval: "weekly"
