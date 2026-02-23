@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-slim
     outputs:
       releases: ${{ steps.read-releases.outputs.releases }}
+      releases-with-lockfile: ${{ steps.read-releases.outputs.releases-with-lockfile }}
     steps:
       - name: Restore cached releases
         id: cache-releases
@@ -49,6 +50,8 @@ jobs:
           releases="$(cat .cache/tofu-releases.json)"
           echo "$releases"
           echo "releases=$releases" >> "$GITHUB_OUTPUT"
+          releases_with_lockfile="$(echo "$releases" | jq -c 'map(select(split(".") | (.[0]|tonumber) * 100 + (.[1]|tonumber) >= 110))')"
+          echo "releases-with-lockfile=$releases_with_lockfile" >> "$GITHUB_OUTPUT"
 
   unit-setup:
     name: Units - tofu-setup
@@ -87,7 +90,7 @@ jobs:
       - get-tofu-releases
     strategy:
       matrix:
-        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases-with-lockfile) }}
         chroot-directory:
           - tst/unlock-state
     steps:
@@ -99,45 +102,28 @@ jobs:
         with:
           tofu-version: ${{ matrix.tofu-version }}
 
-      - name: Start HTTP state server
+      - name: Start MinIO
         shell: bash
         run: |
-          cat > /tmp/state-server.py << 'PYEOF'
-          import http.server, json
-          lock = [b""]
-          state = [b""]
-          class H(http.server.BaseHTTPRequestHandler):
-              def do_GET(self):
-                  self.send_response(200 if state[0] else 204)
-                  self.end_headers()
-                  if state[0]:
-                      self.wfile.write(state[0])
-              def do_POST(self):
-                  n = int(self.headers.get("Content-Length", 0))
-                  state[0] = self.rfile.read(n)
-                  self.send_response(200)
-                  self.end_headers()
-              def do_LOCK(self):
-                  if lock[0]:
-                      self.send_response(423)
-                      self.send_header("Content-Type", "application/json")
-                      self.end_headers()
-                      self.wfile.write(lock[0])
-                  else:
-                      n = int(self.headers.get("Content-Length", 0))
-                      lock[0] = self.rfile.read(n)
-                      self.send_response(200)
-                      self.end_headers()
-              def do_UNLOCK(self):
-                  lock[0] = b""
-                  self.send_response(200)
-                  self.end_headers()
-              def log_message(self, *a):
-                  pass
-          http.server.HTTPServer(("127.0.0.1", 18080), H).serve_forever()
-          PYEOF
-          nohup python3 /tmp/state-server.py > /tmp/state-server.log 2>&1 &
-          sleep 1
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio server /data
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:9000/minio/health/live && break
+            sleep 1
+          done
+
+      - name: Create S3 bucket
+        env:
+          AWS_ACCESS_KEY_ID: minioadmin
+          AWS_SECRET_ACCESS_KEY: minioadmin
+        shell: bash
+        run: |
+          aws s3 mb s3://tofu-state \
+            --endpoint-url http://127.0.0.1:9000 \
+            --region us-east-1
 
       - name: Run tofu init
         working-directory: ${{ matrix.chroot-directory }}
@@ -149,12 +135,16 @@ jobs:
           echo "::endgroup::"
 
       - name: Simulate state lock
+        env:
+          AWS_ACCESS_KEY_ID: minioadmin
+          AWS_SECRET_ACCESS_KEY: minioadmin
         shell: bash
         run: |
-          curl -sf -X LOCK \
-            -H "Content-Type: application/json" \
-            -d '{"ID":"test-lock-id","Operation":"OperationTypeApply","Info":"","Who":"test@localhost","Version":"${{ matrix.tofu-version }}","Created":"2024-01-01T00:00:00.000000Z","Path":"terraform.tfstate"}' \
-            http://127.0.0.1:18080/state
+          echo '{"ID":"test-lock-id","Operation":"OperationTypeApply","Info":"","Who":"test@localhost","Version":"${{ matrix.tofu-version }}","Created":"2024-01-01T00:00:00.000000Z","Path":"tofu-state/terraform.tfstate"}' \
+            | aws s3 cp - s3://tofu-state/terraform.tfstate.tflock \
+                --endpoint-url http://127.0.0.1:9000 \
+                --region us-east-1 \
+                --content-type application/json
 
       - name: Run tofu unlock-state
         uses: ./src/tofu-unlock-state
@@ -163,14 +153,14 @@ jobs:
           lock-id: test-lock-id
 
       - name: Assert state lock has been removed
+        env:
+          AWS_ACCESS_KEY_ID: minioadmin
+          AWS_SECRET_ACCESS_KEY: minioadmin
         shell: bash
         run: |
-          response=$(curl -s -X LOCK \
-            -H "Content-Type: application/json" \
-            -d '{"ID":"verify-lock","Operation":"OperationTypePlan","Info":"","Who":"ci@test","Version":"${{ matrix.tofu-version }}","Created":"2024-01-01T00:00:00.000000Z","Path":"terraform.tfstate"}' \
-            -o /dev/null -w "%{http_code}" \
-            http://127.0.0.1:18080/state)
-          [ "$response" = "200" ] && exit 0 || exit 1
+          ! aws s3 ls s3://tofu-state/terraform.tfstate.tflock \
+            --endpoint-url http://127.0.0.1:9000 \
+            --region us-east-1
 
   unit-fmt:
     name: Units - tofu-fmt
