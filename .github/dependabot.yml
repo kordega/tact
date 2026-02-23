@@ -2,23 +2,9 @@
 version: 2
 updates:
   - package-ecosystem: "github-actions"
-    directory: "/.github/workflows"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: "github-actions"
-    directory: "/src/tofu-apply"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: "github-actions"
-    directory: "/src/tofu-fmt"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: "github-actions"
-    directory: "/src/tofu-plan"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: "github-actions"
-    directory: "/src/tofu-setup"
+    directories:
+      - "/.github/workflows"
+      - "/src/tofu-*"
     schedule:
       interval: "weekly"
   - package-ecosystem: "terraform"
