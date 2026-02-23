@@ -1,0 +1,30 @@
+---
+name: tofu-unlock-state
+description: Unlock the state for the current tofu configuration
+author: Kamil Zabielski
+
+branding:
+  icon: git-merge
+  color: gray-dark
+
+inputs:
+  chroot-directory:
+    description: Directory to chroot into before running tofu force-unlock
+    required: false
+    default: "."
+  lock-id:
+    description: The lock ID to unlock
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run tofu force-unlock
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        echo "::group::Run tofu force-unlock"
+        tofu force-unlock \
+          -force \
+          "${{ inputs.lock-id }}"
+        echo "::endgroup::"
