@@ -10,6 +10,16 @@ on:
     branches: [ '**' ]
 
 jobs:
+  lint-actions:
+    name: Lint GitHub Actions
+    runs-on: ubuntu-slim
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run actionlint
+        uses: rhysd/actionlint@393031adb9afb225ee52ae2ccd7a5af5525e03e8 # v1.7.11
+
   get-tofu-releases:
     name: Get tofu minor releases
     runs-on: ubuntu-slim
@@ -126,6 +136,12 @@ jobs:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
           - tst/plan-with-changes
+        tofu-apply:
+          - 'true'
+        upload-artifact:
+          - 'false'
+        tofu-destroy:
+          - 'true'
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
