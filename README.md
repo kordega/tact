@@ -6,7 +6,7 @@ Composite GitHub Actions for OpenTofu workflows.
 
 Summarize a tfplan file with [`tf-summarize`](https://github.com/dineshba/tf-summarize) and post it to the related pull request using [`thollander/actions-comment-pull-request`](https://github.com/thollander/actions-comment-pull-request).
 
-Example using the `tf-plan` action from this repository:
+Example assuming you already generated a tfplan (for example with the `tf-plan` action in this repository):
 
 ```yaml
 - uses: limakzi/tofu-actions/src/tofu-plan@main
