@@ -151,6 +151,7 @@ runs:
         done
 
     - name: Show plan
+      id: show-plan
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash
       run: |
@@ -160,7 +161,9 @@ runs:
           echo "::error::Plan file not found at $plan_path"
           exit 1
         fi
-        tofu show -no-color "$plan_path"
+        plan_output_path="${{ runner.temp }}/tfplan-output-${{ steps.random-id.outputs.random-id }}.txt"
+        tofu show -no-color "$plan_path" | tee "$plan_output_path"
+        echo "plan-output-path=$plan_output_path" >> "$GITHUB_OUTPUT"
         echo "::endgroup::"
 
     - name: Add plan to step summary
@@ -169,6 +172,7 @@ runs:
       shell: bash
       env:
         PLAN_PATH: ${{ steps.tf-plan.outputs.plan-file-path }}
+        PLAN_OUTPUT_PATH: ${{ steps.show-plan.outputs.plan-output-path }}
       run: |
         if [[ -z "${GITHUB_STEP_SUMMARY:-}" ]]; then
           echo "GITHUB_STEP_SUMMARY not set; skipping."
@@ -178,10 +182,14 @@ runs:
           echo "::error::Plan file not found at $PLAN_PATH"
           exit 1
         fi
+        if [[ ! -f "$PLAN_OUTPUT_PATH" ]]; then
+          PLAN_OUTPUT_PATH="$(mktemp)"
+          tofu show -no-color "$PLAN_PATH" > "$PLAN_OUTPUT_PATH"
+        fi
         {
           echo "### Tofu plan"
           echo '```'
-          tofu show -no-color "$PLAN_PATH"
+          cat "$PLAN_OUTPUT_PATH"
           echo '```'
         } >> "$GITHUB_STEP_SUMMARY"
 
