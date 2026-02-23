@@ -1,5 +1,5 @@
 ---
-name: tf-taint
+name: tofu-taint
 description: Taint a resource using tofu
 author: Kamil Zabielski
 
