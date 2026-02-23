@@ -140,7 +140,7 @@ jobs:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
           - tst/plan-with-changes
-        # Matrix vars used in expressions must be defined as lists for actionlint; these string defaults cover the single combination
+        # Matrix vars referenced below must exist (for workflow execution and actionlint); these single-value lists cover the only combination
         tofu-apply:
           - 'true'
         upload-artifact:
