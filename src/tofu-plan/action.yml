@@ -186,6 +186,10 @@ runs:
           echo "::error::Plan file not found at $PLAN_PATH"
           exit 1
         fi
+        if [[ ! -r "$PLAN_OUTPUT_PATH" ]]; then
+          echo "::error::Plan output not found or unreadable at $PLAN_OUTPUT_PATH"
+          exit 1
+        fi
         {
           echo "### Tofu plan"
           echo '```'
