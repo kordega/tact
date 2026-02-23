@@ -16,6 +16,10 @@ inputs:
     description: The name of the GitHub Actions artifact containing the tf plan file to summarize. Mutually exclusive with plan-file-path.
     required: false
     default: ""
+  chroot-directory:
+    description: Directory to run commands from (where terraform/tofu files live).
+    required: false
+    default: "."
   comment-header:
     description: Heading text prepended to the pull-request comment.
     required: false
@@ -76,6 +80,16 @@ runs:
           echo "plan-file-path=${{ inputs.plan-file-path }}" >> "$GITHUB_OUTPUT"
         fi
 
+    - name: Ensure tofu init
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        echo "::group::Run tofu init"
+        tofu init \
+          -input=false \
+          -backend=false
+        echo "::endgroup::"
+
     - name: Install tf-summarize
       uses: kishaningithub/setup-tf-summarize@2d271132698c29398f931f604dea000d74a58aca # v1
       with:
@@ -83,6 +97,7 @@ runs:
 
     - name: Generate tf plan summary
       id: generate-summary
+      working-directory: ${{ inputs.chroot-directory }}
       shell: bash
       run: |
         plan_path="${{ steps.set-plan-file-path.outputs.plan-file-path }}"
