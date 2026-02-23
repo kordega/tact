@@ -178,10 +178,6 @@ runs:
         PLAN_PATH: ${{ steps.tf-plan.outputs.plan-file-path }}
         PLAN_OUTPUT_PATH: ${{ steps.show-plan.outputs.plan-output-path }}
       run: |
-        if [[ -z "${GITHUB_STEP_SUMMARY:-}" ]]; then
-          echo "::error::GITHUB_STEP_SUMMARY not set; cannot add plan to summary."
-          exit 1
-        fi
         if [[ ! -f "$PLAN_PATH" ]]; then
           echo "::error::Plan file not found at $PLAN_PATH"
           exit 1
@@ -191,7 +187,7 @@ runs:
           exit 1
         fi
         {
-          echo "### Tofu plan"
+          echo "## ${{ inputs.environment }}"
           echo '```'
           cat "$PLAN_OUTPUT_PATH"
           echo '```'
