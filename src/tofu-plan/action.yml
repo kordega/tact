@@ -163,7 +163,10 @@ runs:
         fi
         plan_output_path="${{ runner.temp }}/tfplan-output-${{ steps.random-id.outputs.random-id }}.txt"
         set -o pipefail
-        tofu show -no-color "$plan_path" | tee "$plan_output_path"
+        if ! tofu show -no-color "$plan_path" | tee "$plan_output_path"; then
+          echo "::error::Failed to render plan output."
+          exit 1
+        fi
         echo "plan-output-path=$plan_output_path" >> "$GITHUB_OUTPUT"
         echo "::endgroup::"
 
@@ -181,10 +184,6 @@ runs:
         fi
         if [[ ! -f "$PLAN_PATH" ]]; then
           echo "::error::Plan file not found at $PLAN_PATH"
-          exit 1
-        fi
-        if [[ ! -f "$PLAN_OUTPUT_PATH" ]]; then
-          echo "::error::Plan output not found at $PLAN_OUTPUT_PATH"
           exit 1
         fi
         {
