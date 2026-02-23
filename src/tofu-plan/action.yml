@@ -3,6 +3,10 @@ name: tf-plan
 description: Run tofu plan
 author: Kamil Zabielski
 
+branding:
+  icon: git-merge
+  color: gray-dark
+
 inputs:
   chroot-directory:
     description: Directory to chroot into before running tofu plan

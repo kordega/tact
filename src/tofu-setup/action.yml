@@ -3,6 +3,10 @@ name: tofu-setup
 description: Setup tofu cli
 author: Kamil Zabielski
 
+branding:
+  icon: git-merge
+  color: gray-dark
+
 inputs:
   cli-config-credentials-hostname:
     description: |
