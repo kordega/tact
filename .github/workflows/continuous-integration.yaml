@@ -11,7 +11,7 @@ on:
 
 permissions:
   contents: read
-  actions: write
+  actions: read
 
 jobs:
   lint-actions:
@@ -26,6 +26,9 @@ jobs:
 
   get-tofu-releases:
     name: Get tofu minor releases
+    permissions:
+      contents: read
+      actions: write
     runs-on: ubuntu-slim
     outputs:
       releases: ${{ steps.read-releases.outputs.releases }}
@@ -264,6 +267,9 @@ jobs:
 
   integration-plan:
     name: Integration - plan and apply
+    permissions:
+      contents: read
+      actions: write
     runs-on: ubuntu-slim
     outputs:
       plan-has-changes: ${{ steps.tf-plan.outputs.plan-has-changes }}
@@ -301,6 +307,9 @@ jobs:
 
   integration-apply-with-artifact:
     name: Integration - apply with artifact
+    permissions:
+      contents: read
+      actions: write
     runs-on: ubuntu-slim
     needs: 
       - integration-plan
