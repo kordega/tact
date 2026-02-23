@@ -169,14 +169,11 @@ runs:
       if: ${{ inputs.send-to-step-summary == 'true' }}
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash
-      env:
-
-        STEP_SUMMARY_PLAN_OUTPUT_PATH: ${{ steps.show-plan.outputs.plan-output-path }}
       run: |
         {
           echo "## ${{ inputs.environment }}"
           echo '```'
-          cat "$STEP_SUMMARY_PLAN_OUTPUT_PATH"
+          cat "${{ steps.show-plan.outputs.plan-output-path }}"
           echo '```'
         } >> "$GITHUB_STEP_SUMMARY"
 
