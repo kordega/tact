@@ -77,12 +77,9 @@ runs:
         fi
 
     - name: Install tf-summarize
-      shell: bash
-      run: |
-        echo "::group::Install tf-summarize"
-        go install github.com/dineshba/tf-summarize@${{ inputs.tf-summarize-version }}
-        echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-        echo "::endgroup::"
+      uses: kishaningithub/setup-tf-summarize@2d271132698c29398f931f604dea000d74a58aca # v1
+      with:
+        tf-summarize-version: ${{ inputs.tf-summarize-version }}
 
     - name: Generate tf plan summary
       id: generate-summary
