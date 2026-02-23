@@ -95,7 +95,7 @@ jobs:
           - tst/unlock-state
     services:
       minio:
-        image: minio/minio
+        image: bitnami/minio
         ports:
           - 9000:9000
         env:
@@ -106,8 +106,6 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-          --entrypoint sh
-          -- -c "minio server /data"
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
