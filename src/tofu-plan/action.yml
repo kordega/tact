@@ -145,6 +145,7 @@ runs:
         done
 
     - name: Show plan
+      working-directory: ${{ inputs.chroot-directory }}
       shell: bash
       run: |
         echo "::group::Show plan"
