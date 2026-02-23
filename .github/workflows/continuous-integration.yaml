@@ -243,6 +243,9 @@ jobs:
 
   integration-plan:
     name: Integration - plan and apply
+    permissions:
+      contents: read
+      pull-requests: write
     runs-on: ubuntu-slim
     outputs:
       plan-has-changes: ${{ steps.tf-plan.outputs.plan-has-changes }}
@@ -278,11 +281,22 @@ jobs:
           [[ "${{ steps.tf-plan.outputs.plan-has-changes }}" = "true" ]]
           [[ "${{ steps.tf-plan.outputs.plan-add-count }}" = "1" ]]
 
+      - name: Comment plan summary
+        if: github.event_name == 'pull_request'
+        uses: ./src/tofu-plan-comment
+        with:
+          plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
+          comment-header: "## OpenTofu Plan Summary"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
   integration-apply-with-artifact:
     name: Integration - apply with artifact
     runs-on: ubuntu-slim
     needs: 
       - integration-plan
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -314,6 +328,14 @@ jobs:
         run: |
           [[ "${{ steps.tf-plan-destroy.outputs.plan-has-changes }}" = "true" ]]
           [[ "${{ steps.tf-plan-destroy.outputs.plan-destroy-count }}" = "1" ]]
+
+      - name: Comment destroy plan summary
+        if: github.event_name == 'pull_request'
+        uses: ./src/tofu-plan-comment
+        with:
+          plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
+          comment-header: "## OpenTofu Destroy Plan Summary"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run tofu apply for destroy
         id: tf-apply-destroy
