@@ -123,14 +123,15 @@ runs:
         set -e
 
         if [ "$plan_exit_code" -eq 0 ]; then
-          echo "plan-has-changes=false" >> "$GITHUB_OUTPUT"
+          plan_has_changes=false
         elif [ "$plan_exit_code" -eq 2 ]; then
-          echo "plan-has-changes=true" >> "$GITHUB_OUTPUT"
+          plan_has_changes=true
         else
           echo "tf plan failed with exit code $plan_exit_code"
           exit "$plan_exit_code"
         fi
         echo "plan-file-path=${{ steps.generate-plan-filename.outputs.plan-file-path }}" >> "$GITHUB_OUTPUT"
+        echo "plan-has-changes=$plan_has_changes" >> "$GITHUB_OUTPUT"
         echo "plan-artifact-name=${{ steps.generate-plan-filename.outputs.plan-artifact-name }}" >> "$GITHUB_OUTPUT"
 
         tofu show -json "${{ steps.generate-plan-filename.outputs.plan-file-path }}" | jq -r '
