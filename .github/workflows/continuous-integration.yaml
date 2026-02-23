@@ -143,13 +143,10 @@ jobs:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
           - tst/plan-with-changes
-        # Matrix vars referenced below must exist (for workflow execution and actionlint); these single-value lists cover the only combination
-        tofu-apply:
-          - 'true'
-        upload-artifact:
-          - 'false'
-        tofu-destroy:
-          - 'true'
+    env:
+      TOFU_APPLY: 'true'
+      UPLOAD_ARTIFACT: 'false'
+      TOFU_DESTROY: 'true'
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -165,7 +162,7 @@ jobs:
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
-          upload-artifact: ${{ matrix.upload-artifact }}
+          upload-artifact: ${{ env.UPLOAD_ARTIFACT }}
 
       - name: Assert tofu plan change counts
         shell: bash
@@ -180,7 +177,7 @@ jobs:
       - name: Run tofu apply without artifact
         id: tf-apply-no-artifact
         uses: ./src/tofu-apply
-        if: matrix.tofu-apply == 'true' && matrix.upload-artifact == 'false'
+        if: env.TOFU_APPLY == 'true' && env.UPLOAD_ARTIFACT == 'false'
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
@@ -189,7 +186,7 @@ jobs:
       - name: Run tofu apply with artifact
         id: tf-apply-with-artifact
         uses: ./src/tofu-apply
-        if: matrix.tofu-apply == 'true' && matrix.upload-artifact == 'true'
+        if: env.TOFU_APPLY == 'true' && env.UPLOAD_ARTIFACT == 'true'
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
@@ -198,17 +195,17 @@ jobs:
       - name: Run tofu plan for destroy test fixture
         id: tf-plan-destroy
         uses: ./src/tofu-plan
-        if: matrix.tofu-destroy == 'true'
+        if: env.TOFU_DESTROY == 'true'
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
-          tofu-destroy: '${{ matrix.tofu-destroy }}'
-          upload-artifact: '${{ matrix.upload-artifact }}'
+          tofu-destroy: '${{ env.TOFU_DESTROY }}'
+          upload-artifact: '${{ env.UPLOAD_ARTIFACT }}'
 
       - name: Run tofu apply for destroy test fixture
         id: tf-apply-destroy
         uses: ./src/tofu-apply
-        if: matrix.tofu-destroy == 'true'
+        if: env.TOFU_DESTROY == 'true'
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
