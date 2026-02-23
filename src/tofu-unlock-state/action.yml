@@ -24,7 +24,7 @@ runs:
       shell: bash
       run: |
         echo "::group::Run tofu force-unlock"
+        trap 'echo "::endgroup::"' EXIT
         tofu force-unlock \
           -force \
           "${{ inputs.lock-id }}"
-        echo "::endgroup::"

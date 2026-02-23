@@ -109,22 +109,23 @@ jobs:
           echo "::endgroup::"
 
       - name: Simulate state lock
+        working-directory: ${{ matrix.chroot-directory }}
         shell: bash
         run: |
           echo '{"ID":"test-lock-id","Operation":"OperationTypeApply","Info":"","Who":"test@localhost","Version":"${{ matrix.tofu-version }}","Created":"2024-01-01T00:00:00.000000Z","Path":"terraform.tfstate"}' \
-            > ${{ matrix.chroot-directory }}/terraform.tfstate.lock.info
+            > terraform.tfstate.lock.info
 
       - name: Run tofu unlock-state
-        id: tf-unlock-state
         uses: ./src/tofu-unlock-state
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
           lock-id: test-lock-id
 
       - name: Assert state lock has been removed
+        working-directory: ${{ matrix.chroot-directory }}
         shell: bash
         run: |
-          [ ! -f "${{ matrix.chroot-directory }}/terraform.tfstate.lock.info" ] && exit 0 || exit 1
+          [ ! -f "terraform.tfstate.lock.info" ] && exit 0 || exit 1
 
   unit-fmt:
     name: Units - tofu-fmt
