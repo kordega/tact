@@ -1,5 +1,5 @@
 ---
-name: tf-fmt
+name: tofu-fmt
 description: Format files using tofu
 author: Kamil Zabielski
 
