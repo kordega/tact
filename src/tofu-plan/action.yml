@@ -162,6 +162,7 @@ runs:
           exit 1
         fi
         plan_output_path="${{ runner.temp }}/tfplan-output-${{ steps.random-id.outputs.random-id }}.txt"
+        set -o pipefail
         tofu show -no-color "$plan_path" | tee "$plan_output_path"
         echo "plan-output-path=$plan_output_path" >> "$GITHUB_OUTPUT"
         echo "::endgroup::"
@@ -175,8 +176,8 @@ runs:
         PLAN_OUTPUT_PATH: ${{ steps.show-plan.outputs.plan-output-path }}
       run: |
         if [[ -z "${GITHUB_STEP_SUMMARY:-}" ]]; then
-          echo "GITHUB_STEP_SUMMARY not set; skipping."
-          exit 0
+          echo "::error::GITHUB_STEP_SUMMARY not set; cannot add plan to summary."
+          exit 1
         fi
         if [[ ! -f "$PLAN_PATH" ]]; then
           echo "::error::Plan file not found at $PLAN_PATH"
