@@ -71,6 +71,15 @@ jobs:
           environment: integration-chained
           plan-artifact-name: ${{ needs.integration-chained-plan.outputs.plan-artifact-name }}
 
+      - name: Upload tfstate as artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: integration-chained-tfstate
+          path: |
+            tst/plan-with-changes/terraform.tfstate
+          retention-days: 1
+          if-no-files-found: error
+
   integration-chained-plan-destroy:
     name: Integration - chained plan destroy
     runs-on: ubuntu-slim
@@ -87,6 +96,12 @@ jobs:
         uses: ./src/tofu-setup
         with:
           tofu-version: ${{ needs.integration-chained-plan.outputs.tofu-version }}
+
+      - name: Download tfstate artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: integration-chained-tfstate
+          path: tst/plan-with-changes
 
       - name: Run tofu plan destroy
         id: tf-plan-destroy
