@@ -251,6 +251,8 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
+        tofu-version:
+          - 1.11.5
         chroot-directory:
           - tst/plan-with-changes
     steps:
@@ -260,15 +262,21 @@ jobs:
       - name: Run tofu setup
         uses: ./src/tofu-setup
         with:
-          tofu-version: 1.11.5
+          tofu-version: ${{ matrix.tofu-version }}
 
       - name: Run tofu plan
         id: tf-plan
         uses: ./src/tofu-plan
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
-          environment: ${{ matrix.tofu-version }}
+          environment: integration
           upload-artifact: 'true'
+
+      - name: Assert resources to be added
+        shell: bash
+        run: |
+          [[ "${{ steps.tf-plan.outputs.plan-has-changes }}" = "true" ]]
+          [[ "${{ steps.tf-plan.outputs.plan-add-count }}" = "1" ]]
 
   integration-apply-with-artifact:
     name: Integration - apply with artifact
@@ -289,5 +297,28 @@ jobs:
         uses: ./src/tofu-apply
         with:
           chroot-directory: tst/plan-with-changes
-          environment: ${{ needs.integration-plan.outputs.tofu-version }}
+          environment: integration
           plan-artifact-name: ${{ needs.integration-plan.outputs.plan-artifact-name }}
+
+      - name: Run tofu plan for destroy
+        id: tf-plan-destroy
+        uses: ./src/tofu-plan
+        with:
+          chroot-directory: tst/plan-with-changes
+          environment: integration
+          tofu-destroy: 'true'
+          upload-artifact: 'false'
+
+      - name: Assert resources to be removed
+        shell: bash
+        run: |
+          [[ "${{ steps.tf-plan-destroy.outputs.plan-has-changes }}" = "true" ]]
+          [[ "${{ steps.tf-plan-destroy.outputs.plan-destroy-count }}" = "1" ]]
+
+      - name: Run tofu apply for destroy
+        id: tf-apply-destroy
+        uses: ./src/tofu-apply
+        with:
+          chroot-directory: tst/plan-with-changes
+          environment: integration
+          plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
