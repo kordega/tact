@@ -7,7 +7,7 @@ branding:
   icon: git-merge
   color: gray-dark
 
-  inputs:
+inputs:
   chroot-directory:
     description: Directory to chroot into before running tofu apply
     required: false
