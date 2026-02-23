@@ -201,18 +201,35 @@ jobs:
         with:
           tofu-version: ${{ matrix.tofu-version }}
 
-      - name: Run tofu init and apply to create state
-        working-directory: ${{ matrix.chroot-directory }}
-        shell: bash
-        run: |
-          tofu init -input=false
-          tofu apply -auto-approve -input=false
+      - name: Run tofu plan for taint test fixture
+        id: tf-plan
+        uses: ./src/tofu-plan
+        with:
+          chroot-directory: ${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          upload-artifact: 'false'
+
+      - name: Run tofu apply to create state
+        uses: ./src/tofu-apply
+        with:
+          chroot-directory: ${{ matrix.chroot-directory }}
+          plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
 
       - name: Run tofu taint
         uses: ./src/tofu-taint
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
           address: time_static.this
+
+      - name: Assert resource is marked for tainting
+        working-directory: ${{ matrix.chroot-directory }}
+        shell: bash
+        run: |
+          tofu state pull | jq -e '
+            .resources[]
+            | select(.type == "time_static" and .name == "this")
+            | .instances[].status == "tainted"
+          '
 
   integration-plan:
     name: Integration - plan and apply
