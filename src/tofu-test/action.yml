@@ -1,0 +1,63 @@
+---
+name: tofu-test
+description: Run tests using tofu test
+author: Kamil Zabielski
+
+branding:
+  icon: git-merge
+  color: gray-dark
+
+inputs:
+  chroot-directory:
+    description: Directory to chroot into before running tofu test
+    required: false
+    default: "."
+  filter:
+    description: |
+      Limit the run to only the specified test files.
+      If not provided, all test files will be run.
+    required: false
+    default: ""
+  verbose:
+    description: |
+      Whether to print verbose output from tofu test.
+      Defaults to false.
+    required: false
+    default: "false"
+
+outputs:
+  status-code:
+    description: Exit code from tofu test
+    value: ${{ steps.tf-test.outputs.status-code }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run tofu init
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        echo "::group::Run tofu init"
+        tofu init        \
+          -input=false   \
+          -backend=false
+        echo "::endgroup::"
+
+    - name: Run tofu test
+      id: tf-test
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        status_code=0
+        args=()
+        if [[ "${{ inputs.filter }}" != "" ]]; then
+          args+=("-filter=${{ inputs.filter }}")
+        fi
+        if [[ "${{ inputs.verbose }}" == "true" ]]; then
+          args+=("-verbose")
+        fi
+        echo "::group::Run tofu test"
+        tofu test "${args[@]}" || status_code=$?
+        echo "::endgroup::"
+        echo "status-code=$status_code" >> "$GITHUB_OUTPUT"
+        exit "$status_code"
