@@ -227,9 +227,10 @@ jobs:
           chroot-directory: ${{ matrix.chroot-directory }}
 
       - name: Assert tofu test status code
-        if: steps.tf-test.outputs.status-code != '0'
+        if: always()
         shell: bash
-        run: exit 1
+        run: |
+          [ "${{ steps.tf-test.outputs.status-code }}" = "0" ] || exit 1
 
   unit-plan:
     name: Units - tofu-plan
