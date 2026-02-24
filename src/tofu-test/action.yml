@@ -1,0 +1,55 @@
+---
+name: tofu-test
+description: Run tofu test
+author: Kamil Zabielski
+
+branding:
+  icon: git-merge
+  color: gray-dark
+
+inputs:
+  chroot-directory:
+    description: Directory to chroot into before running tofu test
+    required: false
+    default: "."
+
+outputs:
+  status-code:
+    description: The exit status code from tofu test
+    value: ${{ steps.tf-test.outputs.status-code }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Show tofu version
+      shell: bash
+      run: |
+        echo "::group::Show tofu version"
+        tofu version
+        echo "::endgroup::"
+
+    - name: Run tofu init
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        echo "::group::Run tofu init"
+        tofu init        \
+          -input=false   \
+          -backend=false
+        echo "::endgroup::"
+
+    - name: Run tofu test
+      id: tf-test
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        echo "::group::Run tofu test"
+        set +e
+        tofu test
+        test_exit_code=$?
+        set -e
+        echo "status-code=$test_exit_code" >> "$GITHUB_OUTPUT"
+        echo "::endgroup::"
+        if [ "$test_exit_code" -ne 0 ]; then
+          exit "$test_exit_code"
+        fi
