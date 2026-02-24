@@ -323,6 +323,57 @@ jobs:
             | .instances[].status == "tainted"
           '
 
+  unit-import:
+    name: Units - tofu-import
+    runs-on: ubuntu-slim
+    needs:
+      - get-tofu-releases
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
+        chroot-directory:
+          - tst/import-with-plan
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./src/tofu-setup
+        with:
+          tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Run tofu plan for import test fixture
+        id: tf-plan
+        uses: ./src/tofu-plan
+        with:
+          chroot-directory: ${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          upload-artifact: 'false'
+
+      - name: Assert tofu plan import count
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "${{ steps.tf-plan.outputs.plan-import-count }}" = "1" ]
+
+      - name: Run tofu apply to import resource
+        uses: ./src/tofu-apply
+        with:
+          chroot-directory: ${{ matrix.chroot-directory }}
+          plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
+
+      - name: Assert resource has been imported into state
+        working-directory: ${{ matrix.chroot-directory }}
+        shell: bash
+        run: |
+          tofu state pull | jq -e '
+            .resources[]
+            | select(.type == "time_static" and .name == "this")
+            | .instances[].attributes.rfc3339 == "2024-01-01T00:00:00Z"
+          '
+
   integration-plan:
     name: Integration - plan and apply
     runs-on: ubuntu-slim
