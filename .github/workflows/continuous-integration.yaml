@@ -323,6 +323,37 @@ jobs:
             | .instances[].status == "tainted"
           '
 
+      - name: Run tofu plan for recreation
+        id: tf-plan-recreate
+        uses: ./src/tofu-plan
+        with:
+          chroot-directory: ${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          upload-artifact: 'false'
+
+      - name: Assert tofu plan shows resource replacement
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "${{ steps.tf-plan-recreate.outputs.plan-replace-count }}" = "1" ]
+
+      - name: Run tofu apply to recreate the resource
+        uses: ./src/tofu-apply
+        with:
+          chroot-directory: ${{ matrix.chroot-directory }}
+          plan-file-path: ${{ steps.tf-plan-recreate.outputs.plan-file-path }}
+
+      - name: Assert resource has been recreated and is no longer tainted
+        working-directory: ${{ matrix.chroot-directory }}
+        shell: bash
+        run: |
+          tofu state pull | jq -e '
+            .resources[]
+            | select(.type == "time_static" and .name == "this")
+            | .instances[]
+            | has("status") | not
+          '
+
   integration-plan:
     name: Integration - plan and apply
     runs-on: ubuntu-slim
