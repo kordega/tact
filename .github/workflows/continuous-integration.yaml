@@ -203,6 +203,8 @@ jobs:
     runs-on: ubuntu-slim
     needs:
       - get-tofu-releases
+    permissions:
+      contents: read
     strategy:
       matrix:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
