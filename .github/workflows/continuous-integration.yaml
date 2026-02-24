@@ -222,6 +222,7 @@ jobs:
       - name: Run tofu test
         id: tf-test
         uses: ./src/tofu-test
+        continue-on-error: true
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
 

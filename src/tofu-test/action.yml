@@ -47,13 +47,16 @@ runs:
       id: tf-test
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash
+      env:
+        FILTER: ${{ inputs.filter }}
+        VERBOSE: ${{ inputs.verbose }}
       run: |
         status_code=0
         args=()
-        if [[ "${{ inputs.filter }}" != "" ]]; then
-          args+=("-filter=${{ inputs.filter }}")
+        if [[ -n "$FILTER" ]]; then
+          args+=("-filter=$FILTER")
         fi
-        if [[ "${{ inputs.verbose }}" == "true" ]]; then
+        if [[ "$VERBOSE" == "true" ]]; then
           args+=("-verbose")
         fi
         echo "::group::Run tofu test"
