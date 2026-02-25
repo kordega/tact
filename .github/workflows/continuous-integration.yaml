@@ -208,6 +208,14 @@ jobs:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
           - tst/plan-with-changes
+          - tst/plan-without-changes
+        include:
+          - chroot-directory: tst/plan-with-changes
+            plan-has-changes: 'true'
+            plan-add-count: '1'
+          - chroot-directory: tst/plan-without-changes
+            plan-has-changes: 'false'
+            plan-add-count: '0'
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -229,7 +237,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          [ "${{ steps.tf-plan.outputs.plan-add-count }}" = "1" ]
+          [ "${{ steps.tf-plan.outputs.plan-has-changes }}" = "${{ matrix.plan-has-changes }}" ]
+          [ "${{ steps.tf-plan.outputs.plan-add-count }}" = "${{ matrix.plan-add-count }}" ]
           [ "${{ steps.tf-plan.outputs.plan-change-count }}" = "0" ]
           [ "${{ steps.tf-plan.outputs.plan-destroy-count }}" = "0" ]
           [ "${{ steps.tf-plan.outputs.plan-replace-count }}" = "0" ]
