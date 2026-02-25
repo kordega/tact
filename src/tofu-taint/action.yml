@@ -26,19 +26,27 @@ runs:
   using: "composite"
   steps:
     - name: Run tofu taint
-      uses: actions/github-script@f28e40c0e1e4751b89fc1b0bb2e99ba255654b38 # v7.1.0
-      with:
-        script: |
-          const core = require('@actions/core');
-          const {exec} = require('@actions/exec');
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        start_group() {
+          if [ -n "${GITHUB_ACTIONS_COMMAND_FILE:-}" ]; then
+            printf '::group::Run tofu taint\n' >> "$GITHUB_ACTIONS_COMMAND_FILE"
+          else
+            echo "::group::Run tofu taint"
+          fi
+        }
 
-          core.startGroup('Run tofu taint');
-          try {
-            await exec('tofu', [
-              'taint',
-              '-allow-missing=${{ inputs.allow-missing }}',
-              '${{ inputs.address }}',
-            ], { cwd: '${{ inputs.chroot-directory }}' });
-          } finally {
-            core.endGroup();
-          }
+        end_group() {
+          if [ -n "${GITHUB_ACTIONS_COMMAND_FILE:-}" ]; then
+            printf '::endgroup::\n' >> "$GITHUB_ACTIONS_COMMAND_FILE"
+          else
+            echo "::endgroup::"
+          fi
+        }
+
+        start_group
+        tofu taint \
+          -allow-missing=${{ inputs.allow-missing }} \
+          "${{ inputs.address }}"
+        end_group
