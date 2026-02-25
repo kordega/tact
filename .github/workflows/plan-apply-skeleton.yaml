@@ -44,6 +44,11 @@ jobs:
         with:
           tofu-version: ${{ inputs.tofu-version }}
 
+      - name: Run tofu fmt
+        uses: ./src/tofu-fmt
+        with:
+          chroot-directory: ${{ inputs.chroot-directory }}
+
       - name: Run tofu plan
         id: tf-plan
         uses: ./src/tofu-plan
