@@ -95,7 +95,7 @@ jobs:
     name: Integration - skeleton workflow
     needs:
       - integration-plan
-    uses: ./.github/workflows/skeletons/plan-apply.yaml
+    uses: ./.github/workflows/plan-apply-skeleton.yaml
     secrets: inherit
     with:
       tofu-version: ${{ needs.integration-plan.outputs.tofu-version }}
