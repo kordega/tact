@@ -187,6 +187,14 @@ runs:
     - name: Install tf-summarize
       uses: kishaningithub/setup-tf-summarize@v2
 
+    - name: Run tf-summarize
+      id: summarize-plan
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        tf-summarize "${{ steps.generate-plan-filename.outputs.plan-file-path }}" > "${{ steps.generate-plan-filename.outputs.comment-file-path }}.summary"
+        echo "summary-path=${{ steps.generate-plan-filename.outputs.comment-file-path }}.summary" >> "$GITHUB_OUTPUT"
+
     - name: Generate plan comment
       id: generate-comment
       working-directory: ${{ inputs.chroot-directory }}
@@ -200,7 +208,7 @@ runs:
           echo "## ${{ inputs.environment }}"
           echo
           echo '```'
-          tf-summarize "${{ steps.generate-plan-filename.outputs.plan-file-path }}"
+          cat "${{ steps.summarize-plan.outputs.summary-path }}"
           echo '```'
         } > "$comment_file"
 
