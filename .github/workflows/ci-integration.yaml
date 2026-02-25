@@ -90,3 +90,26 @@ jobs:
           chroot-directory: tst/plan-with-changes
           environment: integration
           plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
+
+  integration-skeleton:
+    name: Integration - skeleton workflow
+    needs:
+      - integration-plan
+    uses: ./.github/workflows/skeletons/plan-apply.yaml
+    secrets: inherit
+    with:
+      tofu-version: ${{ needs.integration-plan.outputs.tofu-version }}
+      chroot-directory: tst/plan-with-changes
+      environment: integration
+
+  integration-skeleton-assert:
+    name: Integration - skeleton assertions
+    runs-on: ubuntu-slim
+    needs:
+      - integration-skeleton
+    steps:
+      - name: Assert skeleton outputs
+        shell: bash
+        run: |
+          [[ "${{ needs.integration-skeleton.outputs.plan-has-changes }}" = "true" ]]
+          [[ "${{ needs.integration-skeleton.outputs.plan-add-count }}" = "1" ]]
