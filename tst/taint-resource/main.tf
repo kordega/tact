@@ -1,2 +1,1 @@
-resource "time_static" "this" {
-}
+resource "time_static" "this" {}
