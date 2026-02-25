@@ -1,5 +1,5 @@
 ---
-name: tf-fmt
+name: tofu-fmt
 description: Format files using tofu
 author: Kamil Zabielski
 
@@ -27,6 +27,8 @@ runs:
       shell: bash
       run: |
         status_code=0
+        echo "::group::Run tofu fmt"
         tofu fmt -check -recursive . || status_code=$?
+        echo "::endgroup::"
         echo "status-code=$status_code" >> "$GITHUB_OUTPUT"
         exit "$status_code"
