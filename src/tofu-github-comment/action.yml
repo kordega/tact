@@ -75,36 +75,27 @@ runs:
 
         plan_json_path="${{ runner.temp }}/tfplan.json"
         summary_output="${{ runner.temp }}/tfplan-summary.txt"
+        plan_text_output="${{ runner.temp }}/tfplan.txt"
 
         echo "::group::Generate plan summary"
         changes=$(tofu show -json "${{ steps.set-plan-file-path.outputs.plan-file-path }}" | tee "$plan_json_path" | jq '(.resource_changes // []) | length')
         echo "plan-json-path=$plan_json_path" >> "$GITHUB_OUTPUT"
 
+        tofu show "${{ steps.set-plan-file-path.outputs.plan-file-path }}" > "$plan_text_output"
+
         if [ "$changes" -eq 0 ]; then
           echo "plan-has-changes=false" >> "$GITHUB_OUTPUT"
-          echo "::notice::No changes detected in plan. Skipping comment."
-          echo "::endgroup::"
-          exit 0
+          echo "summary-path=$plan_text_output" >> "$GITHUB_OUTPUT"
+        else
+          tf-summarize "$plan_json_path" > "$summary_output"
+          echo "plan-has-changes=true" >> "$GITHUB_OUTPUT"
+          echo "summary-path=$summary_output" >> "$GITHUB_OUTPUT"
         fi
-
-        tf-summarize "$plan_json_path" > "$summary_output"
-        echo "plan-has-changes=true" >> "$GITHUB_OUTPUT"
-        echo "summary-path=$summary_output" >> "$GITHUB_OUTPUT"
         echo "::endgroup::"
-
-    - name: Resolve comment token
-      id: resolve-comment-token
-      shell: bash
-      run: |
-        token="${{ inputs.github-token }}"
-        if [ -z "$token" ]; then
-          token="${{ github.token }}"
-        fi
-        echo "token=$token" >> "$GITHUB_OUTPUT"
 
     - name: Prepare comment body
       id: prepare-comment-body
-      if: ${{ github.event_name == 'pull_request' && steps.generate-plan-summary.outputs.plan-has-changes == 'true' }}
+      if: ${{ github.event_name == 'pull_request' }}
       shell: bash
       run: |
         set -euo pipefail
@@ -125,8 +116,8 @@ runs:
         echo "comment-file=$comment_file" >> "$GITHUB_OUTPUT"
 
     - name: Add plan summary comment
-      if: ${{ github.event_name == 'pull_request' && steps.generate-plan-summary.outputs.plan-has-changes == 'true' }}
+      if: ${{ github.event_name == 'pull_request' }}
       uses: thollander/actions-comment-pull-request@master
       with:
-        github-token: ${{ steps.resolve-comment-token.outputs.token }}
+        github-token: ${{ inputs.github-token || github.token }}
         file-path: ${{ steps.prepare-comment-body.outputs.comment-file }}
