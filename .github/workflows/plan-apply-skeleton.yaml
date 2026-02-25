@@ -29,12 +29,8 @@ on:
         value: ${{ jobs.tofu-plan.outputs.plan-artifact-name }}
 
 jobs:
-  tofu-plan:
+  tofu-fmt:
     runs-on: ubuntu-slim
-    outputs:
-      plan-has-changes: ${{ steps.tf-plan.outputs.plan-has-changes }}
-      plan-add-count: ${{ steps.tf-plan.outputs.plan-add-count }}
-      plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -48,6 +44,23 @@ jobs:
         uses: ./src/tofu-fmt
         with:
           chroot-directory: ${{ inputs.chroot-directory }}
+
+  tofu-plan:
+    runs-on: ubuntu-slim
+    needs:
+      - tofu-fmt
+    outputs:
+      plan-has-changes: ${{ steps.tf-plan.outputs.plan-has-changes }}
+      plan-add-count: ${{ steps.tf-plan.outputs.plan-add-count }}
+      plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./src/tofu-setup
+        with:
+          tofu-version: ${{ inputs.tofu-version }}
 
       - name: Run tofu plan
         id: tf-plan
