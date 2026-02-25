@@ -15,6 +15,7 @@ jobs:
     outputs:
       releases: ${{ steps.read-releases.outputs.releases }}
       releases-with-lockfile: ${{ steps.read-releases.outputs.releases-with-lockfile }}
+      latest-release: ${{ steps.read-releases.outputs.latest-release }}
     steps:
       - name: Restore cached releases
         id: cache-releases
@@ -51,6 +52,8 @@ jobs:
           echo "releases=$releases" >> "$GITHUB_OUTPUT"
           releases_with_lockfile="$(echo "$releases" | jq -c 'map(select(split(".") | (.[0]|tonumber) * 100 + (.[1]|tonumber) >= 110))')"
           echo "releases-with-lockfile=$releases_with_lockfile" >> "$GITHUB_OUTPUT"
+          latest_release="$(echo "$releases" | jq -r 'last')"
+          echo "latest-release=$latest_release" >> "$GITHUB_OUTPUT"
 
   unit-setup:
     name: Units - tofu-setup
@@ -387,3 +390,68 @@ jobs:
             | select(.type == "time_static" and .name == "this")
             | .instances[].attributes.rfc3339 == "2024-01-01T00:00:00Z"
           '
+
+  unit-github-comment:
+    name: Units - tofu-github-comment
+    runs-on: ubuntu-slim
+    needs:
+      - get-tofu-releases
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./src/tofu-setup
+        with:
+          tofu-version: ${{ needs.get-tofu-releases.outputs.latest-release }}
+
+      - name: Run tofu plan
+        id: tf-plan
+        uses: ./src/tofu-plan
+        with:
+          chroot-directory: tst/plan-with-changes
+          environment: ${{ needs.get-tofu-releases.outputs.latest-release }}
+          upload-artifact: 'false'
+
+      - name: Count existing comments for environment title
+        id: comments-before
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ENV_TITLE: ${{ needs.get-tofu-releases.outputs.latest-release }}
+        shell: bash
+        run: |
+          count=$(
+            curl -fsSL \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/issues/${{ github.event.pull_request.number }}/comments" \
+            | jq "[.[] | select(.body | contains(\"## ${ENV_TITLE}\"))] | length"
+          )
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
+      - name: Run tofu-github-comment
+        uses: ./src/tofu-github-comment
+        with:
+          environment: ${{ needs.get-tofu-releases.outputs.latest-release }}
+          plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
+
+      - name: Assert comment was added
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ENV_TITLE: ${{ needs.get-tofu-releases.outputs.latest-release }}
+          COUNT_BEFORE: ${{ steps.comments-before.outputs.count }}
+        shell: bash
+        run: |
+          count_after=$(
+            curl -fsSL \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/issues/${{ github.event.pull_request.number }}/comments" \
+            | jq "[.[] | select(.body | contains(\"## ${ENV_TITLE}\"))] | length"
+          )
+          echo "count_after=$count_after"
+          [ "$count_after" -gt "$COUNT_BEFORE" ]
