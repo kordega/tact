@@ -53,6 +53,7 @@ jobs:
           upload-artifact: 'true'
 
   tofu-apply:
+    if: ${{ needs.tofu-plan.outputs.plan-has-changes == 'true' }}
     runs-on: ubuntu-slim
     needs:
       - tofu-plan

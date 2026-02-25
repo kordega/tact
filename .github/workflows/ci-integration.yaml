@@ -92,24 +92,44 @@ jobs:
           plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
 
   integration-skeleton:
-    name: Integration - skeleton workflow
+    name: Integration - skeleton workflow (${{ matrix.chroot-directory }})
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - chroot-directory: tst/plan-with-changes
+            expect-plan-has-changes: 'true'
+            expect-plan-add-count: '1'
+          - chroot-directory: tst/plan-without-changes
+            expect-plan-has-changes: 'false'
+            expect-plan-add-count: '0'
     needs:
       - integration-plan
     uses: ./.github/workflows/plan-apply-skeleton.yaml
     secrets: inherit
     with:
       tofu-version: ${{ needs.integration-plan.outputs.tofu-version }}
-      chroot-directory: tst/plan-with-changes
+      chroot-directory: ${{ matrix.chroot-directory }}
       environment: integration
 
   integration-skeleton-assert:
-    name: Integration - skeleton assertions
+    name: Integration - skeleton assertions (${{ matrix.chroot-directory }})
     runs-on: ubuntu-slim
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - chroot-directory: tst/plan-with-changes
+            expect-plan-has-changes: 'true'
+            expect-plan-add-count: '1'
+          - chroot-directory: tst/plan-without-changes
+            expect-plan-has-changes: 'false'
+            expect-plan-add-count: '0'
     needs:
       - integration-skeleton
     steps:
       - name: Assert skeleton outputs
         shell: bash
         run: |
-          [[ "${{ needs.integration-skeleton.outputs.plan-has-changes }}" = "true" ]]
-          [[ "${{ needs.integration-skeleton.outputs.plan-add-count }}" = "1" ]]
+          [[ "${{ needs.integration-skeleton.outputs.plan-has-changes }}" = "${{ matrix.expect-plan-has-changes }}" ]]
+          [[ "${{ needs.integration-skeleton.outputs.plan-add-count }}" = "${{ matrix.expect-plan-add-count }}" ]]
