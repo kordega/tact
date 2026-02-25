@@ -72,4 +72,4 @@ runs:
       with:
         github-token: ${{ inputs.github-token || github.token }}
         file-path: ${{ steps.set-comment-file-path.outputs.comment-file-path }}
-        comment-identifier: ${{ inputs.comment-identifier }}
+        comment-tag: ${{ inputs.comment-identifier }}

@@ -432,6 +432,10 @@ jobs:
           COMMENT_ID: ${{ steps.tofu-comment.outputs.comment-id }}
         shell: bash
         run: |
+          if [[ -z "${COMMENT_ID}" ]]; then
+            echo "Comment ID is empty; tofu-github-comment may have failed to create or update the comment."
+            exit 1
+          fi
           body=$(
             curl -fsSL \
               -H "Authorization: Bearer $GITHUB_TOKEN" \
