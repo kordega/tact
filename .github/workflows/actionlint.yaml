@@ -21,4 +21,4 @@ jobs:
       - name: Run actionlint
         uses: raven-actions/actionlint@e01d1ea33dd6a5ed517d95b4c0c357560ac6f518
         with:
-          actionlint_flags: --config-file .github/actionlint.yaml .github/workflows/actionlint.yaml
+          actionlint_flags: .github/workflows/actionlint.yaml
