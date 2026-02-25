@@ -22,7 +22,7 @@ jobs:
       - name: Run actionlint
         uses: raven-actions/actionlint@e01d1ea33dd6a5ed517d95b4c0c357560ac6f518
         with:
-          actionlint_flags: .github/workflows/ci-units.yaml
+          actionlint_flags: .github/workflows/*.yaml
 
   get-tofu-releases:
     name: Setup / Prepare tofu releases
