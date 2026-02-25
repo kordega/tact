@@ -47,8 +47,6 @@ jobs:
 
   tofu-plan:
     runs-on: ubuntu-slim
-    needs:
-      - tofu-fmt
     outputs:
       plan-has-changes: ${{ steps.tf-plan.outputs.plan-has-changes }}
       plan-add-count: ${{ steps.tf-plan.outputs.plan-add-count }}
