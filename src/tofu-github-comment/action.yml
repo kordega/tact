@@ -1,0 +1,134 @@
+---
+name: tofu-github-comment
+description: Add a GitHub comment with the OpenTofu plan summary
+author: Kamil Zabielski
+
+branding:
+  icon: git-merge
+  color: gray-dark
+
+inputs:
+  chroot-directory:
+    description: Directory to chroot into before running tofu commands
+    required: false
+    default: "."
+  environment:
+    description: The name of the tofu environment associated with the plan.
+    required: false
+  plan-file-path:
+    description: The path to the tofu plan file to summarize when not using an artifact. One of plan-file-path or plan-artifact-name must be provided.
+    required: false
+    default: ""
+  plan-artifact-name:
+    description: The name of the GitHub Actions artifact containing the tofu plan file to summarize. Takes precedence over plan-file-path if both are provided. One of plan-file-path or plan-artifact-name must be provided.
+    required: false
+    default: ""
+  github-token:
+    description: GitHub token used to create the pull request comment. Defaults to github.token.
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Either plan-file-path or plan-artifact-name must be provided
+      if: ${{ inputs.plan-file-path == '' && inputs.plan-artifact-name == '' }}
+      shell: bash
+      run: |
+        echo "::error::Either plan-file-path or plan-artifact-name must be provided"
+        exit 1
+
+    - name: Only one of plan-file-path or plan-artifact-name must be provided
+      if: ${{ inputs.plan-file-path != '' && inputs.plan-artifact-name != '' }}
+      shell: bash
+      run: |
+        echo "::error::Only one of plan-file-path or plan-artifact-name must be provided"
+        exit 1
+
+    - name: Download plan artifact if plan-artifact-name is provided
+      if: ${{ inputs.plan-artifact-name != '' }}
+      id: download-plan-artifact
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+      with:
+        name: ${{ inputs.plan-artifact-name }}
+        path: ${{ runner.temp }}
+
+    - name: Set plan-file-path
+      id: set-plan-file-path
+      shell: bash
+      run: |
+        if [[ "${{ inputs.plan-artifact-name }}" != "" ]]; then
+          echo "plan-file-path=${{ steps.download-plan-artifact.outputs.download-path }}/${{ inputs.plan-artifact-name }}" >> "$GITHUB_OUTPUT"
+        else
+          echo "plan-file-path=${{ inputs.plan-file-path }}" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Install tf-summarize
+      uses: kishaningithub/setup-tf-summarize@v2
+
+    - name: Generate plan summary
+      id: generate-plan-summary
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        plan_json_path="${{ runner.temp }}/tfplan.json"
+        summary_output="${{ runner.temp }}/tfplan-summary.txt"
+
+        echo "::group::Generate plan summary"
+        changes=$(tofu show -json "${{ steps.set-plan-file-path.outputs.plan-file-path }}" | tee "$plan_json_path" | jq '(.resource_changes // []) | length')
+        echo "plan-json-path=$plan_json_path" >> "$GITHUB_OUTPUT"
+
+        if [ "$changes" -eq 0 ]; then
+          echo "plan-has-changes=false" >> "$GITHUB_OUTPUT"
+          echo "::notice::No changes detected in plan. Skipping comment."
+          echo "::endgroup::"
+          exit 0
+        fi
+
+        tf-summarize "$plan_json_path" > "$summary_output"
+        echo "plan-has-changes=true" >> "$GITHUB_OUTPUT"
+        echo "summary-path=$summary_output" >> "$GITHUB_OUTPUT"
+        echo "::endgroup::"
+
+    - name: Resolve comment token
+      id: resolve-comment-token
+      shell: bash
+      run: |
+        token="${{ inputs.github-token }}"
+        if [ -z "$token" ]; then
+          token="${{ github.token }}"
+        fi
+        echo "token=$token" >> "$GITHUB_OUTPUT"
+
+    - name: Add plan summary comment
+      if: ${{ github.event_name == 'pull_request' && steps.generate-plan-summary.outputs.plan-has-changes == 'true' }}
+      uses: actions/github-script@60a0c4e01211190c1f4e5d624c503e408dc78778 # v7
+      with:
+        github-token: ${{ steps.resolve-comment-token.outputs.token }}
+        script: |
+          const fs = require('fs');
+          const summary = fs.readFileSync('${{ steps.generate-plan-summary.outputs.summary-path }}', 'utf8').trim();
+          const environment = '${{ inputs.environment }}';
+          const title = environment ? `OpenTofu Plan Summary (${environment})` : 'OpenTofu Plan Summary';
+          const body = [
+            `## ${title}`,
+            '',
+            '```',
+            summary || 'No changes to display.',
+            '```'
+          ].join('\n');
+
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            body,
+          });
+
+    - name: Skip commenting when not a pull request
+      if: ${{ github.event_name != 'pull_request' }}
+      shell: bash
+      run: |
+        echo "::notice::tofu-github-comment only posts comments on pull_request events."
