@@ -74,23 +74,14 @@ runs:
         set -euo pipefail
 
         plan_json_path="${{ runner.temp }}/tfplan.json"
-        summary_output="${{ runner.temp }}/tfplan-summary.txt"
         plan_text_output="${{ runner.temp }}/tfplan.txt"
 
         echo "::group::Generate plan summary"
-        changes=$(tofu show -json "${{ steps.set-plan-file-path.outputs.plan-file-path }}" | tee "$plan_json_path" | jq '(.resource_changes // []) | length')
+        tofu show -json "${{ steps.set-plan-file-path.outputs.plan-file-path }}" | tee "$plan_json_path" > /dev/null
         echo "plan-json-path=$plan_json_path" >> "$GITHUB_OUTPUT"
 
         tofu show "${{ steps.set-plan-file-path.outputs.plan-file-path }}" > "$plan_text_output"
-
-        if [ "$changes" -eq 0 ]; then
-          echo "plan-has-changes=false" >> "$GITHUB_OUTPUT"
-          echo "summary-path=$plan_text_output" >> "$GITHUB_OUTPUT"
-        else
-          tf-summarize "$plan_json_path" > "$summary_output"
-          echo "plan-has-changes=true" >> "$GITHUB_OUTPUT"
-          echo "summary-path=$summary_output" >> "$GITHUB_OUTPUT"
-        fi
+        echo "summary-path=$plan_text_output" >> "$GITHUB_OUTPUT"
         echo "::endgroup::"
 
     - name: Prepare comment body
@@ -100,10 +91,7 @@ runs:
       run: |
         set -euo pipefail
         comment_file="${{ runner.temp }}/tfplan-comment.md"
-        title="OpenTofu Plan Summary"
-        if [ -n "${{ inputs.environment }}" ]; then
-          title="$title (${{ inputs.environment }})"
-        fi
+        title="${{ inputs.environment }}"
 
         {
           echo "## $title"
