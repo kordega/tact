@@ -105,7 +105,7 @@ runs:
 
     - name: Add plan summary comment
       if: ${{ github.event_name == 'pull_request' }}
-      uses: thollander/actions-comment-pull-request@master
+      uses: thollander/actions-comment-pull-request@e4a76dd2b0a3c2027c3fd84147a67c22ee4c90fa
       with:
         github-token: ${{ inputs.github-token || github.token }}
         file-path: ${{ steps.prepare-comment-body.outputs.comment-file }}
