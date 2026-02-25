@@ -208,6 +208,7 @@ jobs:
         chroot-directory:
           - tst/plan-with-changes
           - tst/plan-without-changes
+          - tst/plan-with-sops
         include:
           - chroot-directory: tst/plan-with-changes
             plan-has-changes: 'true'
@@ -215,12 +216,23 @@ jobs:
             upload-artifact: 'false'
             tofu-apply: 'true'
             tofu-destroy: 'true'
+            sops-age-key: ''
           - chroot-directory: tst/plan-without-changes
             plan-has-changes: 'false'
             plan-add-count: '0'
             upload-artifact: 'false'
             tofu-apply: 'true'
             tofu-destroy: 'true'
+            sops-age-key: ''
+          - chroot-directory: tst/plan-with-sops
+            plan-has-changes: 'true'
+            plan-add-count: '1'
+            upload-artifact: 'false'
+            tofu-apply: 'true'
+            tofu-destroy: 'true'
+            sops-age-key: 'AGE-SECRET-KEY-18EDM87RHYPH4DNF8V8D80DQPZLY8M08EYD0AYF42A0HJAN225ZGS6EHY7X'
+    env:
+      SOPS_AGE_KEY: ${{ matrix.sops-age-key }}
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
