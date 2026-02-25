@@ -1,6 +1,6 @@
 ---
-name: CI - Units
-run-name: ci-units-${{ github.event_name == 'pull_request' && github.event.number || github.run_number }}
+name: CI
+run-name: ci-${{ github.event_name == 'pull_request' && github.event.number || github.run_number }}
 
 on:
   push:
@@ -8,9 +8,24 @@ on:
   pull_request:
     branches: [ '**' ]
 
+permissions:
+  contents: read
+
 jobs:
+  actionlint:
+    name: Lint / actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run actionlint
+        uses: raven-actions/actionlint@e01d1ea33dd6a5ed517d95b4c0c357560ac6f518
+        with:
+          actionlint_flags: .github/workflows/ci-units.yaml
+
   get-tofu-releases:
-    name: Get tofu minor releases
+    name: Setup / Prepare tofu releases
     runs-on: ubuntu-slim
     outputs:
       releases: ${{ steps.read-releases.outputs.releases }}
@@ -53,7 +68,7 @@ jobs:
           echo "releases-with-lockfile=$releases_with_lockfile" >> "$GITHUB_OUTPUT"
 
   unit-setup:
-    name: Units - tofu-setup
+    name: Unit / Setup
     needs: 
       - get-tofu-releases
     strategy:
@@ -83,7 +98,7 @@ jobs:
           echo "::endgroup::"
 
   unit-unlock-state:
-    name: Units - tofu-unlock-state
+    name: Unit / Unlock state
     runs-on: ubuntu-latest
     needs:
       - get-tofu-releases
@@ -162,7 +177,7 @@ jobs:
             --region us-east-1
 
   unit-fmt:
-    name: Units - tofu-fmt
+    name: Unit / Format
     runs-on: ubuntu-slim
     needs: 
       - get-tofu-releases
@@ -198,7 +213,7 @@ jobs:
         run: exit 1
 
   unit-plan:
-    name: Units - tofu-plan
+    name: Unit / Plan
     runs-on: ubuntu-slim
     needs: 
       - get-tofu-releases
@@ -299,7 +314,7 @@ jobs:
           plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
 
   unit-taint:
-    name: Units - tofu-taint
+    name: Unit / Taint
     runs-on: ubuntu-slim
     needs:
       - get-tofu-releases
@@ -350,7 +365,7 @@ jobs:
           '
 
   unit-import:
-    name: Units - tofu-import
+    name: Unit / Import
     runs-on: ubuntu-slim
     needs:
       - get-tofu-releases
@@ -399,3 +414,102 @@ jobs:
             | select(.type == "time_static" and .name == "this")
             | .instances[].attributes.rfc3339 == "2024-01-01T00:00:00Z"
           '
+
+  integration-plan:
+    name: Integration / Plan
+    runs-on: ubuntu-slim
+    outputs:
+      plan-has-changes: ${{ steps.tf-plan.outputs.plan-has-changes }}
+      plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
+      tofu-version: ${{ matrix.tofu-version }}
+    strategy:
+      fail-fast: true
+      matrix:
+        tofu-version:
+          - 1.11.5
+        chroot-directory:
+          - tst/plan-with-changes
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./src/tofu-setup
+        with:
+          tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Run tofu plan
+        id: tf-plan
+        uses: ./src/tofu-plan
+        with:
+          chroot-directory: ${{ matrix.chroot-directory }}
+          environment: integration
+          upload-artifact: 'true'
+
+      - name: Assert resources to be added
+        shell: bash
+        run: |
+          [[ "${{ steps.tf-plan.outputs.plan-has-changes }}" = "true" ]]
+          [[ "${{ steps.tf-plan.outputs.plan-add-count }}" = "1" ]]
+
+  integration-apply-with-artifact:
+    name: Integration / Apply with artifact
+    runs-on: ubuntu-slim
+    needs: 
+      - integration-plan
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./src/tofu-setup
+        with:
+          tofu-version: ${{ needs.integration-plan.outputs.tofu-version }}
+
+      - name: Run tofu apply with artifact
+        id: tf-apply-with-artifact
+        uses: ./src/tofu-apply
+        with:
+          chroot-directory: tst/plan-with-changes
+          environment: integration
+          plan-artifact-name: ${{ needs.integration-plan.outputs.plan-artifact-name }}
+
+      - name: Run tofu plan for destroy
+        id: tf-plan-destroy
+        uses: ./src/tofu-plan
+        with:
+          chroot-directory: tst/plan-with-changes
+          environment: integration
+          tofu-destroy: 'true'
+          upload-artifact: 'false'
+
+      - name: Assert resources to be removed
+        shell: bash
+        run: |
+          [[ "${{ steps.tf-plan-destroy.outputs.plan-has-changes }}" = "true" ]]
+          [[ "${{ steps.tf-plan-destroy.outputs.plan-destroy-count }}" = "1" ]]
+
+      - name: Run tofu apply for destroy
+        id: tf-apply-destroy
+        uses: ./src/tofu-apply
+        with:
+          chroot-directory: tst/plan-with-changes
+          environment: integration
+          plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
+
+  integration-skeleton:
+    name: Integration / Skeleton (${{ matrix.chroot-directory }})
+    needs:
+      - integration-plan
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - chroot-directory: tst/plan-with-changes
+          - chroot-directory: tst/plan-without-changes
+    uses: ./.github/workflows/plan-apply-skeleton.yaml
+    secrets: inherit
+    with:
+      tofu-version: ${{ needs.integration-plan.outputs.tofu-version }}
+      chroot-directory: ${{ matrix.chroot-directory }}
+      environment: integration
