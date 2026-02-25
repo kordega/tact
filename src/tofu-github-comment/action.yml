@@ -8,19 +8,12 @@ branding:
   color: gray-dark
 
 inputs:
-  chroot-directory:
-    description: Directory to chroot into before running tofu commands
-    required: false
-    default: "."
-  environment:
-    description: The name of the tofu environment associated with the plan.
-    required: false
-  plan-file-path:
-    description: The path to the tofu plan file to summarize when not using an artifact. One of plan-file-path or plan-artifact-name must be provided.
+  comment-file-path:
+    description: The path to the pre-generated plan comment file. One of comment-file-path or comment-artifact-name must be provided.
     required: false
     default: ""
-  plan-artifact-name:
-    description: The name of the GitHub Actions artifact containing the tofu plan file to summarize. Takes precedence over plan-file-path if both are provided. One of plan-file-path or plan-artifact-name must be provided.
+  comment-artifact-name:
+    description: The name of the GitHub Actions artifact containing the pre-generated plan comment file. Takes precedence over comment-file-path if both are provided. One of comment-file-path or comment-artifact-name must be provided.
     required: false
     default: ""
   github-token:
@@ -31,81 +24,41 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Either plan-file-path or plan-artifact-name must be provided
-      if: ${{ inputs.plan-file-path == '' && inputs.plan-artifact-name == '' }}
+    - name: Either comment-file-path or comment-artifact-name must be provided
+      if: ${{ inputs.comment-file-path == '' && inputs.comment-artifact-name == '' }}
       shell: bash
       run: |
-        echo "::error::Either plan-file-path or plan-artifact-name must be provided"
+        echo "::error::Either comment-file-path or comment-artifact-name must be provided"
         exit 1
 
-    - name: Only one of plan-file-path or plan-artifact-name must be provided
-      if: ${{ inputs.plan-file-path != '' && inputs.plan-artifact-name != '' }}
+    - name: Only one of comment-file-path or comment-artifact-name must be provided
+      if: ${{ inputs.comment-file-path != '' && inputs.comment-artifact-name != '' }}
       shell: bash
       run: |
-        echo "::error::Only one of plan-file-path or plan-artifact-name must be provided"
+        echo "::error::Only one of comment-file-path or comment-artifact-name must be provided"
         exit 1
 
-    - name: Download plan artifact if plan-artifact-name is provided
-      if: ${{ inputs.plan-artifact-name != '' }}
-      id: download-plan-artifact
+    - name: Download comment artifact if comment-artifact-name is provided
+      if: ${{ inputs.comment-artifact-name != '' }}
+      id: download-comment-artifact
       uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
       with:
-        name: ${{ inputs.plan-artifact-name }}
+        name: ${{ inputs.comment-artifact-name }}
         path: ${{ runner.temp }}
 
-    - name: Set plan-file-path
-      id: set-plan-file-path
+    - name: Set comment-file-path
+      id: set-comment-file-path
       shell: bash
       run: |
-        if [[ "${{ inputs.plan-artifact-name }}" != "" ]]; then
-          echo "plan-file-path=${{ steps.download-plan-artifact.outputs.download-path }}/${{ inputs.plan-artifact-name }}" >> "$GITHUB_OUTPUT"
+        if [[ "${{ inputs.comment-artifact-name }}" != "" ]]; then
+          echo "comment-file-path=${{ steps.download-comment-artifact.outputs.download-path }}/${{ inputs.comment-artifact-name }}" >> "$GITHUB_OUTPUT"
         else
-          echo "plan-file-path=${{ inputs.plan-file-path }}" >> "$GITHUB_OUTPUT"
+          echo "comment-file-path=${{ inputs.comment-file-path }}" >> "$GITHUB_OUTPUT"
         fi
-
-    - name: Install tf-summarize
-      uses: kishaningithub/setup-tf-summarize@v2
-
-    - name: Generate plan summary
-      id: generate-plan-summary
-      working-directory: ${{ inputs.chroot-directory }}
-      shell: bash
-      run: |
-        set -euo pipefail
-
-        plan_json_path="${{ runner.temp }}/tfplan.json"
-        plan_text_output="${{ runner.temp }}/tfplan.txt"
-
-        echo "::group::Generate plan summary"
-        tofu show -json "${{ steps.set-plan-file-path.outputs.plan-file-path }}" | tee "$plan_json_path" > /dev/null
-        echo "plan-json-path=$plan_json_path" >> "$GITHUB_OUTPUT"
-
-        tofu show "${{ steps.set-plan-file-path.outputs.plan-file-path }}" > "$plan_text_output"
-        echo "summary-path=$plan_text_output" >> "$GITHUB_OUTPUT"
-        echo "::endgroup::"
-
-    - name: Prepare comment body
-      id: prepare-comment-body
-      if: ${{ github.event_name == 'pull_request' }}
-      shell: bash
-      run: |
-        set -euo pipefail
-        comment_file="${{ runner.temp }}/tfplan-comment.md"
-        title="${{ inputs.environment }}"
-
-        {
-          echo "## $title"
-          echo
-          echo '```'
-          cat "${{ steps.generate-plan-summary.outputs.summary-path }}"
-          echo '```'
-        } > "$comment_file"
-
-        echo "comment-file=$comment_file" >> "$GITHUB_OUTPUT"
 
     - name: Add plan summary comment
       if: ${{ github.event_name == 'pull_request' }}
       uses: thollander/actions-comment-pull-request@e4a76dd2b0a3c2027c3fd84147a67c22ee4c90fa
       with:
         github-token: ${{ inputs.github-token || github.token }}
-        file-path: ${{ steps.prepare-comment-body.outputs.comment-file }}
+        file-path: ${{ steps.set-comment-file-path.outputs.comment-file-path }}

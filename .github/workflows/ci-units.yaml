@@ -416,6 +416,7 @@ jobs:
           chroot-directory: tst/plan-with-changes
           environment: ${{ needs.get-tofu-releases.outputs.latest-release }}
           upload-artifact: 'false'
+          upload-comment-artifact: 'true'
 
       - name: Count existing comments for environment title
         id: comments-before
@@ -436,9 +437,7 @@ jobs:
       - name: Run tofu-github-comment
         uses: ./src/tofu-github-comment
         with:
-          chroot-directory: tst/plan-with-changes
-          environment: ${{ needs.get-tofu-releases.outputs.latest-release }}
-          plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
+          comment-artifact-name: ${{ steps.tf-plan.outputs.comment-artifact-name }}
 
       - name: Assert comment was added
         env:

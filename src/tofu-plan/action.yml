@@ -47,6 +47,18 @@ inputs:
       Accepts true/false. Defaults to true.
     required: false
     default: "true"
+  upload-comment-artifact:
+    description: |
+      Whether to generate and upload the plan comment markdown file as a GitHub Actions artifact.
+      Defaults to true.
+    required: false
+    default: "true"
+  comment-retention-days:
+    description: |
+      Number of days to retain the generated plan comment file artifact.
+      Defaults to 1.
+    required: false
+    default: "1"
 
 outputs:
   plan-file-path:
@@ -73,6 +85,12 @@ outputs:
   plan-replace-count:
     description: Number of resources the plan will replace.
     value: ${{ steps.tf-plan.outputs.plan-replace-count }}
+  comment-file-path:
+    description: The path to the generated markdown file containing the plan summary comment.
+    value: ${{ steps.generate-comment.outputs.comment-file-path }}
+  comment-artifact-name:
+    description: The name to use for the plan comment artifact (used when upload-comment-artifact is true).
+    value: ${{ steps.generate-plan-filename.outputs.comment-artifact-name }}
 
 runs:
   using: "composite"
@@ -107,6 +125,8 @@ runs:
         echo "plan-file-path=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.tfplan" >> "$GITHUB_OUTPUT"
         echo "plan-artifact-name=tfplan-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.tfplan" >> "$GITHUB_OUTPUT"
         echo "plan-output-path=${{ runner.temp }}/tfplan-output-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.txt" >> "$GITHUB_OUTPUT"
+        echo "comment-file-path=${{ runner.temp }}/tfplan-comment-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.md" >> "$GITHUB_OUTPUT"
+        echo "comment-artifact-name=tfplan-comment-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.md" >> "$GITHUB_OUTPUT"
 
     - name: Run tofu plan
       id: tf-plan
@@ -161,6 +181,28 @@ runs:
         echo "plan-output-path=${{ steps.generate-plan-filename.outputs.plan-output-path }}" >> "$GITHUB_OUTPUT"
         echo "::endgroup::"
 
+    - name: Install tf-summarize
+      uses: kishaningithub/setup-tf-summarize@v2
+
+    - name: Generate plan comment
+      id: generate-comment
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        comment_file="${{ steps.generate-plan-filename.outputs.comment-file-path }}"
+
+        {
+          echo "## ${{ inputs.environment }}"
+          echo
+          echo '```'
+          tf-summarize "${{ steps.generate-plan-filename.outputs.plan-file-path }}"
+          echo '```'
+        } > "$comment_file"
+
+        echo "comment-file-path=$comment_file" >> "$GITHUB_OUTPUT"
+
     - name: Add plan to step summary
       if: ${{ inputs.send-to-step-summary == 'true' }}
       working-directory: ${{ inputs.chroot-directory }}
@@ -180,4 +222,13 @@ runs:
         name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
         path: ${{ steps.tf-plan.outputs.plan-file-path }}
         retention-days: ${{ inputs.plan-retention-days }}
+        if-no-files-found: error
+
+    - name: Upload plan comment as artifact
+      if: ${{ inputs.upload-comment-artifact == 'true' }}
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+      with:
+        name: ${{ steps.generate-plan-filename.outputs.comment-artifact-name }}
+        path: ${{ steps.generate-comment.outputs.comment-file-path }}
+        retention-days: ${{ inputs.comment-retention-days }}
         if-no-files-found: error
