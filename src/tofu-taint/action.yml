@@ -26,11 +26,19 @@ runs:
   using: "composite"
   steps:
     - name: Run tofu taint
-      working-directory: ${{ inputs.chroot-directory }}
-      shell: bash
-      run: |
-        echo "::group::Run tofu taint"
-        tofu taint \
-          -allow-missing=${{ inputs.allow-missing }} \
-          "${{ inputs.address }}"
-        echo "::endgroup::"
+      uses: actions/github-script@f28e40c0e1e4751b89fc1b0bb2e99ba255654b38 # v7.1.0
+      with:
+        script: |
+          const core = require('@actions/core');
+          const {exec} = require('@actions/exec');
+
+          core.startGroup('Run tofu taint');
+          try {
+            await exec('tofu', [
+              'taint',
+              '-allow-missing=${{ inputs.allow-missing }}',
+              '${{ inputs.address }}',
+            ], { cwd: '${{ inputs.chroot-directory }}' });
+          } finally {
+            core.endGroup();
+          }
