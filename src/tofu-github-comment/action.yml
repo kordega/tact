@@ -102,33 +102,31 @@ runs:
         fi
         echo "token=$token" >> "$GITHUB_OUTPUT"
 
-    - name: Add plan summary comment
+    - name: Prepare comment body
+      id: prepare-comment-body
       if: ${{ github.event_name == 'pull_request' && steps.generate-plan-summary.outputs.plan-has-changes == 'true' }}
-      uses: actions/github-script@60a0c4e01211190c1f4e5d624c503e408dc78778 # v7
-      with:
-        github-token: ${{ steps.resolve-comment-token.outputs.token }}
-        script: |
-          const fs = require('fs');
-          const summary = fs.readFileSync('${{ steps.generate-plan-summary.outputs.summary-path }}', 'utf8').trim();
-          const environment = '${{ inputs.environment }}';
-          const title = environment ? `OpenTofu Plan Summary (${environment})` : 'OpenTofu Plan Summary';
-          const body = [
-            `## ${title}`,
-            '',
-            '```',
-            summary || 'No changes to display.',
-            '```'
-          ].join('\n');
-
-          await github.rest.issues.createComment({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: context.issue.number,
-            body,
-          });
-
-    - name: Skip commenting when not a pull request
-      if: ${{ github.event_name != 'pull_request' }}
       shell: bash
       run: |
-        echo "::notice::tofu-github-comment only posts comments on pull_request events."
+        set -euo pipefail
+        comment_file="${{ runner.temp }}/tfplan-comment.md"
+        title="OpenTofu Plan Summary"
+        if [ -n "${{ inputs.environment }}" ]; then
+          title="$title (${{ inputs.environment }})"
+        fi
+
+        {
+          echo "## $title"
+          echo
+          echo '```'
+          cat "${{ steps.generate-plan-summary.outputs.summary-path }}"
+          echo '```'
+        } > "$comment_file"
+
+        echo "comment-file=$comment_file" >> "$GITHUB_OUTPUT"
+
+    - name: Add plan summary comment
+      if: ${{ github.event_name == 'pull_request' && steps.generate-plan-summary.outputs.plan-has-changes == 'true' }}
+      uses: thollander/actions-comment-pull-request@master
+      with:
+        github-token: ${{ steps.resolve-comment-token.outputs.token }}
+        file-path: ${{ steps.prepare-comment-body.outputs.comment-file }}
