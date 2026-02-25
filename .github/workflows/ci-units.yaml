@@ -1,7 +1,6 @@
 ---
-name: Continuous Integration
-run-name: ci-${{ github.event_name == 'pull_request' && github.event.number || github.run_number }}
-
+name: CI - Units
+run-name: ci-units-${{ github.event_name == 'pull_request' && github.event.number || github.run_number }}
 
 on:
   push:
@@ -382,85 +381,3 @@ jobs:
             | select(.type == "time_static" and .name == "this")
             | .instances[].attributes.rfc3339 == "2024-01-01T00:00:00Z"
           '
-
-  integration-plan:
-    name: Integration - plan and apply
-    runs-on: ubuntu-slim
-    outputs:
-      plan-has-changes: ${{ steps.tf-plan.outputs.plan-has-changes }}
-      plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
-      tofu-version: ${{ matrix.tofu-version }}
-    strategy:
-      fail-fast: true
-      matrix:
-        tofu-version:
-          - 1.11.5
-        chroot-directory:
-          - tst/plan-with-changes
-    steps:
-      - name: Checkout the repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Run tofu setup
-        uses: ./src/tofu-setup
-        with:
-          tofu-version: ${{ matrix.tofu-version }}
-
-      - name: Run tofu plan
-        id: tf-plan
-        uses: ./src/tofu-plan
-        with:
-          chroot-directory: ${{ matrix.chroot-directory }}
-          environment: integration
-          upload-artifact: 'true'
-
-      - name: Assert resources to be added
-        shell: bash
-        run: |
-          [[ "${{ steps.tf-plan.outputs.plan-has-changes }}" = "true" ]]
-          [[ "${{ steps.tf-plan.outputs.plan-add-count }}" = "1" ]]
-
-  integration-apply-with-artifact:
-    name: Integration - apply with artifact
-    runs-on: ubuntu-slim
-    needs: 
-      - integration-plan
-    steps:
-      - name: Checkout the repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Run tofu setup
-        uses: ./src/tofu-setup
-        with:
-          tofu-version: ${{ needs.integration-plan.outputs.tofu-version }}
-
-      - name: Run tofu apply with artifact
-        id: tf-apply-with-artifact
-        uses: ./src/tofu-apply
-        with:
-          chroot-directory: tst/plan-with-changes
-          environment: integration
-          plan-artifact-name: ${{ needs.integration-plan.outputs.plan-artifact-name }}
-
-      - name: Run tofu plan for destroy
-        id: tf-plan-destroy
-        uses: ./src/tofu-plan
-        with:
-          chroot-directory: tst/plan-with-changes
-          environment: integration
-          tofu-destroy: 'true'
-          upload-artifact: 'false'
-
-      - name: Assert resources to be removed
-        shell: bash
-        run: |
-          [[ "${{ steps.tf-plan-destroy.outputs.plan-has-changes }}" = "true" ]]
-          [[ "${{ steps.tf-plan-destroy.outputs.plan-destroy-count }}" = "1" ]]
-
-      - name: Run tofu apply for destroy
-        id: tf-apply-destroy
-        uses: ./src/tofu-apply
-        with:
-          chroot-directory: tst/plan-with-changes
-          environment: integration
-          plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
