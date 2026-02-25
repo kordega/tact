@@ -7,6 +7,11 @@ branding:
   icon: git-merge
   color: gray-dark
 
+outputs:
+  comment-id:
+    description: ID of the created or updated pull request comment.
+    value: ${{ steps.add-plan-summary-comment.outputs.comment-id }}
+
 inputs:
   comment-file-path:
     description: The path to the pre-generated plan comment file. One of comment-file-path or comment-artifact-name must be provided.
@@ -62,6 +67,7 @@ runs:
 
     - name: Add plan summary comment
       if: ${{ github.event_name == 'pull_request' }}
+      id: add-plan-summary-comment
       uses: thollander/actions-comment-pull-request@e4a76dd2b0a3c2027c3fd84147a67c22ee4c90fa
       with:
         github-token: ${{ inputs.github-token || github.token }}

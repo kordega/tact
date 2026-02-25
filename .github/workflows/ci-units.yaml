@@ -418,23 +418,8 @@ jobs:
           upload-artifact: 'false'
           upload-comment-artifact: 'true'
 
-      - name: Count existing comments for environment title
-        id: comments-before
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          ENV_TITLE: ${{ needs.get-tofu-releases.outputs.latest-release }}
-        shell: bash
-        run: |
-          count=$(
-            curl -fsSL \
-              -H "Authorization: Bearer $GITHUB_TOKEN" \
-              -H "Accept: application/vnd.github+json" \
-              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/issues/${{ github.event.pull_request.number }}/comments" \
-            | jq "[.[] | select(.body | contains(\"## ${ENV_TITLE}\"))] | length"
-          )
-          echo "count=$count" >> "$GITHUB_OUTPUT"
-
       - name: Run tofu-github-comment
+        id: tofu-comment
         uses: ./src/tofu-github-comment
         with:
           comment-artifact-name: ${{ steps.tf-plan.outputs.comment-artifact-name }}
@@ -444,15 +429,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           ENV_TITLE: ${{ needs.get-tofu-releases.outputs.latest-release }}
-          COUNT_BEFORE: ${{ steps.comments-before.outputs.count }}
+          COMMENT_ID: ${{ steps.tofu-comment.outputs.comment-id }}
         shell: bash
         run: |
-          count_after=$(
+          body=$(
             curl -fsSL \
               -H "Authorization: Bearer $GITHUB_TOKEN" \
               -H "Accept: application/vnd.github+json" \
-              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/issues/${{ github.event.pull_request.number }}/comments" \
-            | jq "[.[] | select(.body | contains(\"## ${ENV_TITLE}\"))] | length"
+              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/issues/comments/${COMMENT_ID}" \
+            | jq -r .body
           )
-          echo "count_after=$count_after"
-          [ "$count_after" -gt "$COUNT_BEFORE" ]
+          echo "comment_body=$body"
+          grep -q "## ${ENV_TITLE}" <<< "$body"
