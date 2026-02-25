@@ -1,0 +1,73 @@
+---
+name: Skeleton - Plan and Apply
+
+on:
+  workflow_call:
+    inputs:
+      tofu-version:
+        description: Version of OpenTofu to install.
+        required: true
+        type: string
+      environment:
+        description: Name of the tofu environment used for planning/applying.
+        required: true
+        type: string
+      chroot-directory:
+        description: Directory to chroot into before running tofu commands.
+        required: false
+        default: "."
+        type: string
+    outputs:
+      plan-has-changes:
+        description: Whether the generated plan contains any changes.
+        value: ${{ jobs.plan.outputs.plan-has-changes }}
+      plan-add-count:
+        description: Number of resources the plan will add.
+        value: ${{ jobs.plan.outputs.plan-add-count }}
+      plan-artifact-name:
+        description: Name of the uploaded plan artifact.
+        value: ${{ jobs.plan.outputs.plan-artifact-name }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-slim
+    outputs:
+      plan-has-changes: ${{ steps.tf-plan.outputs.plan-has-changes }}
+      plan-add-count: ${{ steps.tf-plan.outputs.plan-add-count }}
+      plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./src/tofu-setup
+        with:
+          tofu-version: ${{ inputs.tofu-version }}
+
+      - name: Run tofu plan
+        id: tf-plan
+        uses: ./src/tofu-plan
+        with:
+          chroot-directory: ${{ inputs.chroot-directory }}
+          environment: ${{ inputs.environment }}
+          upload-artifact: 'true'
+
+  apply:
+    runs-on: ubuntu-slim
+    needs:
+      - plan
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./src/tofu-setup
+        with:
+          tofu-version: ${{ inputs.tofu-version }}
+
+      - name: Run tofu apply
+        uses: ./src/tofu-apply
+        with:
+          chroot-directory: ${{ inputs.chroot-directory }}
+          environment: ${{ inputs.environment }}
+          plan-artifact-name: ${{ needs.plan.outputs.plan-artifact-name }}
