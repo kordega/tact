@@ -195,7 +195,7 @@ runs:
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash
       run: |
-        tf-summarize "${{ steps.show-plan.outputs.plan-json-path }}" > "${{ steps.generate-plan-filename.outputs.comment-file-path }}.summary"
+        tf-summarize -md "${{ steps.show-plan.outputs.plan-json-path }}" > "${{ steps.generate-plan-filename.outputs.comment-file-path }}.summary"
         echo "summary-path=${{ steps.generate-plan-filename.outputs.comment-file-path }}.summary" >> "$GITHUB_OUTPUT"
 
     - name: Generate plan comment
