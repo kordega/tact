@@ -10,7 +10,7 @@ branding:
 outputs:
   comment-id:
     description: ID of the created or updated pull request comment.
-    value: ${{ steps.add-plan-summary-comment.outputs.comment-id }}
+    value: ${{ steps.resolve-comment-id.outputs.comment-id }}
 
 inputs:
   comment-file-path:
@@ -73,3 +73,37 @@ runs:
         github-token: ${{ inputs.github-token || github.token }}
         file-path: ${{ steps.set-comment-file-path.outputs.comment-file-path }}
         comment-tag: ${{ inputs.comment-identifier }}
+
+    - name: Resolve plan summary comment id
+      if: ${{ github.event_name == 'pull_request' }}
+      id: resolve-comment-id
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token || github.token }}
+        COMMENT_TAG: ${{ inputs.comment-identifier }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        COMMENT_AUTHOR: github-actions[bot]
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        comments=$(
+          curl -fsSL \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments?per_page=100"
+        )
+
+        comment_id=$(printf "%s" "$comments" | jq -r --arg tag "$COMMENT_TAG" --arg author "$COMMENT_AUTHOR" '
+          if $tag != "" then
+            ( [.[] | select(.body | contains("comment_tag: \($tag)"))] | last | .id ) // ""
+          else
+            ( [.[] | select(.user.login == $author)] | last | .id ) // ""
+          end
+        ')
+
+        if [[ -z "$comment_id" ]]; then
+          echo "::error::No pull request comment found for comment-tag '$COMMENT_TAG'"
+          exit 1
+        fi
+
+        echo "comment-id=$comment_id" >> "$GITHUB_OUTPUT"
