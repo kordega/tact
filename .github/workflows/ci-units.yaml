@@ -109,7 +109,7 @@ jobs:
             -e MINIO_ROOT_USER=minioadmin \
             -e MINIO_ROOT_PASSWORD=minioadmin \
             minio/minio server /data
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             curl -sf http://127.0.0.1:9000/minio/health/live && break
             sleep 1
           done
@@ -212,9 +212,15 @@ jobs:
           - chroot-directory: tst/plan-with-changes
             plan-has-changes: 'true'
             plan-add-count: '1'
+            upload-artifact: 'false'
+            tofu-apply: 'true'
+            tofu-destroy: 'true'
           - chroot-directory: tst/plan-without-changes
             plan-has-changes: 'false'
             plan-add-count: '0'
+            upload-artifact: 'false'
+            tofu-apply: 'true'
+            tofu-destroy: 'true'
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
