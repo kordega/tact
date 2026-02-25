@@ -1,1 +1,2 @@
-provider "time" {}
+provider "time" {
+}
