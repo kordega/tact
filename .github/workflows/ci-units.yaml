@@ -438,6 +438,7 @@ jobs:
         uses: ./src/tofu-github-comment
         with:
           comment-artifact-name: ${{ steps.tf-plan.outputs.comment-artifact-name }}
+          comment-identifier: ${{ steps.tf-plan.outputs.environment }}
 
       - name: Assert comment was added
         env:

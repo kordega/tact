@@ -91,6 +91,9 @@ outputs:
   comment-artifact-name:
     description: The name to use for the plan comment artifact (used when upload-comment-artifact is true).
     value: ${{ steps.generate-plan-filename.outputs.comment-artifact-name }}
+  environment:
+    description: The environment value used when generating the plan and comment.
+    value: ${{ inputs.environment }}
 
 runs:
   using: "composite"

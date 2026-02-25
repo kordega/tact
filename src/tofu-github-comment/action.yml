@@ -16,6 +16,10 @@ inputs:
     description: The name of the GitHub Actions artifact containing the pre-generated plan comment file. Takes precedence over comment-file-path if both are provided. One of comment-file-path or comment-artifact-name must be provided.
     required: false
     default: ""
+  comment-identifier:
+    description: Optional identifier to let the action update the same comment instead of posting new ones.
+    required: false
+    default: ""
   github-token:
     description: GitHub token used to create the pull request comment. Defaults to github.token.
     required: false
@@ -62,3 +66,4 @@ runs:
       with:
         github-token: ${{ inputs.github-token || github.token }}
         file-path: ${{ steps.set-comment-file-path.outputs.comment-file-path }}
+        comment-identifier: ${{ inputs.comment-identifier }}
