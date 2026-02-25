@@ -128,6 +128,7 @@ runs:
         echo "plan-file-path=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.tfplan" >> "$GITHUB_OUTPUT"
         echo "plan-artifact-name=tfplan-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.tfplan" >> "$GITHUB_OUTPUT"
         echo "plan-output-path=${{ runner.temp }}/tfplan-output-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.txt" >> "$GITHUB_OUTPUT"
+        echo "plan-json-path=${{ runner.temp }}/tfplan-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.json" >> "$GITHUB_OUTPUT"
         echo "comment-file-path=${{ runner.temp }}/tfplan-comment-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.md" >> "$GITHUB_OUTPUT"
         echo "comment-artifact-name=tfplan-comment-${{ inputs.environment }}-${{ steps.random-id.outputs.random-id }}.md" >> "$GITHUB_OUTPUT"
 
@@ -181,7 +182,9 @@ runs:
       run: |
         echo "::group::Show plan"
         tofu show -no-color "${{ steps.generate-plan-filename.outputs.plan-file-path }}" > "${{ steps.generate-plan-filename.outputs.plan-output-path }}"
+        tofu show -json "${{ steps.generate-plan-filename.outputs.plan-file-path }}" > "${{ steps.generate-plan-filename.outputs.plan-json-path }}"
         echo "plan-output-path=${{ steps.generate-plan-filename.outputs.plan-output-path }}" >> "$GITHUB_OUTPUT"
+        echo "plan-json-path=${{ steps.generate-plan-filename.outputs.plan-json-path }}" >> "$GITHUB_OUTPUT"
         echo "::endgroup::"
 
     - name: Install tf-summarize
@@ -192,7 +195,7 @@ runs:
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash
       run: |
-        tf-summarize "${{ steps.generate-plan-filename.outputs.plan-file-path }}" > "${{ steps.generate-plan-filename.outputs.comment-file-path }}.summary"
+        tf-summarize "${{ steps.show-plan.outputs.plan-json-path }}" > "${{ steps.generate-plan-filename.outputs.comment-file-path }}.summary"
         echo "summary-path=${{ steps.generate-plan-filename.outputs.comment-file-path }}.summary" >> "$GITHUB_OUTPUT"
 
     - name: Generate plan comment
