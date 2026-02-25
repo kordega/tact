@@ -1,2 +1,2 @@
-ignore:
-  - '^\.github/workflows/continuous-integration\.yaml:.*property "(upload-artifact|tofu-apply|tofu-destroy)" is not defined in object type.*$'
+# actionlint configuration file
+# (no ignore rules are currently defined)
