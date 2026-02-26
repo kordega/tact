@@ -513,3 +513,20 @@ jobs:
       tofu-version: ${{ needs.integration-plan.outputs.tofu-version }}
       chroot-directory: ${{ matrix.chroot-directory }}
       environment: integration
+
+  integration-skeleton-version-file:
+    name: Integration / Skeleton version file
+    needs:
+      - integration-plan
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - chroot-directory: tst/plan-with-changes
+          - chroot-directory: tst/plan-without-changes
+    uses: ./.github/workflows/skeleton-plan-apply.yaml
+    secrets: inherit
+    with:
+      tofu-version-file: tst/tofu-version
+      chroot-directory: ${{ matrix.chroot-directory }}
+      environment: integration
