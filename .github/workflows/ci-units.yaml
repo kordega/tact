@@ -128,8 +128,10 @@ jobs:
           echo "::endgroup::"
 
           echo "::group::Check tofu version"
-          [ "$(tofu version -json | jq -r '.terraform_version')" = "${{ env.tofu-version }}" ] && exit 0 || exit 1
+          status=0
+          [ "$(tofu version -json | jq -r '.terraform_version')" = "${{ env.tofu-version }}" ] || status=$?
           echo "::endgroup::"
+          exit "$status"
 
   unit-unlock-state:
     name: Unit - tofu-unlock
