@@ -507,7 +507,7 @@ jobs:
         include:
           - chroot-directory: tst/plan-with-changes
           - chroot-directory: tst/plan-without-changes
-    uses: ./.github/workflows/plan-apply-skeleton.yaml
+    uses: ./.github/workflows/skeleton-plan-apply.yaml
     secrets: inherit
     with:
       tofu-version: ${{ needs.integration-plan.outputs.tofu-version }}
