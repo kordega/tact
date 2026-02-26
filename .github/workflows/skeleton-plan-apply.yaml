@@ -44,6 +44,10 @@ jobs:
         shell: bash
         run: |
           workflow_ref='${{ github.workflow_ref }}'
+          if [[ "$workflow_ref" != *"/.github/workflows/"* || "$workflow_ref" != *"@"* ]]; then
+            echo "Unexpected github.workflow_ref format: $workflow_ref"
+            exit 1
+          fi
           echo "repository=${workflow_ref%%/.github/workflows/*}" >> "$GITHUB_OUTPUT"
           echo "ref=${workflow_ref#*@}" >> "$GITHUB_OUTPUT"
 
@@ -80,6 +84,10 @@ jobs:
         shell: bash
         run: |
           workflow_ref='${{ github.workflow_ref }}'
+          if [[ "$workflow_ref" != *"/.github/workflows/"* || "$workflow_ref" != *"@"* ]]; then
+            echo "Unexpected github.workflow_ref format: $workflow_ref"
+            exit 1
+          fi
           echo "repository=${workflow_ref%%/.github/workflows/*}" >> "$GITHUB_OUTPUT"
           echo "ref=${workflow_ref#*@}" >> "$GITHUB_OUTPUT"
 
@@ -118,6 +126,10 @@ jobs:
         shell: bash
         run: |
           workflow_ref='${{ github.workflow_ref }}'
+          if [[ "$workflow_ref" != *"/.github/workflows/"* || "$workflow_ref" != *"@"* ]]; then
+            echo "Unexpected github.workflow_ref format: $workflow_ref"
+            exit 1
+          fi
           echo "repository=${workflow_ref%%/.github/workflows/*}" >> "$GITHUB_OUTPUT"
           echo "ref=${workflow_ref#*@}" >> "$GITHUB_OUTPUT"
 
