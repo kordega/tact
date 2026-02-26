@@ -39,17 +39,32 @@ jobs:
   tofu-fmt:
     runs-on: ubuntu-slim
     steps:
+      - name: Resolve tofu-actions source
+        id: workflow-source
+        shell: bash
+        run: |
+          workflow_ref='${{ github.workflow_ref }}'
+          echo "repository=${workflow_ref%%/.github/workflows/*}" >> "$GITHUB_OUTPUT"
+          echo "ref=${workflow_ref#*@}" >> "$GITHUB_OUTPUT"
+
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
+      - name: Checkout tofu-actions
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          repository: ${{ steps.workflow-source.outputs.repository }}
+          ref: ${{ steps.workflow-source.outputs.ref }}
+          path: .tofu-actions
+
       - name: Run tofu setup
-        uses: ./src/tofu-setup
+        uses: ./.tofu-actions/src/tofu-setup
         with:
           tofu-version: ${{ inputs.tofu-version }}
           tofu-version-file: ${{ inputs.tofu-version-file }}
 
       - name: Run tofu fmt
-        uses: ./src/tofu-fmt
+        uses: ./.tofu-actions/src/tofu-fmt
         with:
           chroot-directory: ${{ inputs.chroot-directory }}
 
@@ -60,18 +75,33 @@ jobs:
       plan-add-count: ${{ steps.tf-plan.outputs.plan-add-count }}
       plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
     steps:
+      - name: Resolve tofu-actions source
+        id: workflow-source
+        shell: bash
+        run: |
+          workflow_ref='${{ github.workflow_ref }}'
+          echo "repository=${workflow_ref%%/.github/workflows/*}" >> "$GITHUB_OUTPUT"
+          echo "ref=${workflow_ref#*@}" >> "$GITHUB_OUTPUT"
+
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
+      - name: Checkout tofu-actions
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          repository: ${{ steps.workflow-source.outputs.repository }}
+          ref: ${{ steps.workflow-source.outputs.ref }}
+          path: .tofu-actions
+
       - name: Run tofu setup
-        uses: ./src/tofu-setup
+        uses: ./.tofu-actions/src/tofu-setup
         with:
           tofu-version: ${{ inputs.tofu-version }}
           tofu-version-file: ${{ inputs.tofu-version-file }}
 
       - name: Run tofu plan
         id: tf-plan
-        uses: ./src/tofu-plan
+        uses: ./.tofu-actions/src/tofu-plan
         with:
           chroot-directory: ${{ inputs.chroot-directory }}
           environment: ${{ inputs.environment }}
@@ -83,17 +113,32 @@ jobs:
     needs:
       - tofu-plan
     steps:
+      - name: Resolve tofu-actions source
+        id: workflow-source
+        shell: bash
+        run: |
+          workflow_ref='${{ github.workflow_ref }}'
+          echo "repository=${workflow_ref%%/.github/workflows/*}" >> "$GITHUB_OUTPUT"
+          echo "ref=${workflow_ref#*@}" >> "$GITHUB_OUTPUT"
+
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
+      - name: Checkout tofu-actions
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          repository: ${{ steps.workflow-source.outputs.repository }}
+          ref: ${{ steps.workflow-source.outputs.ref }}
+          path: .tofu-actions
+
       - name: Run tofu setup
-        uses: ./src/tofu-setup
+        uses: ./.tofu-actions/src/tofu-setup
         with:
           tofu-version: ${{ inputs.tofu-version }}
           tofu-version-file: ${{ inputs.tofu-version-file }}
 
       - name: Run tofu apply
-        uses: ./src/tofu-apply
+        uses: ./.tofu-actions/src/tofu-apply
         with:
           chroot-directory: ${{ inputs.chroot-directory }}
           environment: ${{ inputs.environment }}
