@@ -32,9 +32,25 @@ on:
         description: Name of the uploaded plan artifact.
         value: ${{ jobs.tofu-plan.outputs.plan-artifact-name }}
 
+permissions:
+  contents: read
+
 jobs:
+  validate-inputs:
+    runs-on: ubuntu-slim
+    steps:
+      - name: Validate tofu setup inputs
+        shell: bash
+        run: |
+          if [[ -z "${{ inputs.tofu-version }}" && -z "${{ inputs.tofu-version-file }}" ]]; then
+            echo "::error::Either tofu-version or tofu-version-file must be provided."
+            exit 1
+          fi
+
   tofu-fmt:
     runs-on: ubuntu-slim
+    needs:
+      - validate-inputs
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -52,6 +68,8 @@ jobs:
 
   tofu-plan:
     runs-on: ubuntu-slim
+    needs:
+      - validate-inputs
     outputs:
       plan-has-changes: ${{ steps.tf-plan.outputs.plan-has-changes }}
       plan-add-count: ${{ steps.tf-plan.outputs.plan-add-count }}
