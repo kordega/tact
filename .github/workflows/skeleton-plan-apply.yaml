@@ -6,7 +6,11 @@ on:
     inputs:
       tofu-version:
         description: Version of OpenTofu to install.
-        required: true
+        required: false
+        type: string
+      tofu-version-file:
+        description: Path to a file containing the OpenTofu version to install.
+        required: false
         type: string
       environment:
         description: Name of the tofu environment used for planning/applying.
@@ -28,6 +32,9 @@ on:
         description: Name of the uploaded plan artifact.
         value: ${{ jobs.tofu-plan.outputs.plan-artifact-name }}
 
+permissions:
+  contents: read
+
 jobs:
   tofu-fmt:
     runs-on: ubuntu-slim
@@ -39,6 +46,7 @@ jobs:
         uses: ./src/tofu-setup
         with:
           tofu-version: ${{ inputs.tofu-version }}
+          tofu-version-file: ${{ inputs.tofu-version-file }}
 
       - name: Run tofu fmt
         uses: ./src/tofu-fmt
@@ -59,6 +67,7 @@ jobs:
         uses: ./src/tofu-setup
         with:
           tofu-version: ${{ inputs.tofu-version }}
+          tofu-version-file: ${{ inputs.tofu-version-file }}
 
       - name: Run tofu plan
         id: tf-plan
@@ -81,6 +90,7 @@ jobs:
         uses: ./src/tofu-setup
         with:
           tofu-version: ${{ inputs.tofu-version }}
+          tofu-version-file: ${{ inputs.tofu-version-file }}
 
       - name: Run tofu apply
         uses: ./src/tofu-apply
