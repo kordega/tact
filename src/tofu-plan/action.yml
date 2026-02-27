@@ -95,7 +95,14 @@ runs:
       shell: bash
       run: |
         while IFS= read -r line; do
-          [ -n "$line" ] && echo "$line" >> "$GITHUB_ENV"
+          if [ -n "$line" ]; then
+            if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*=.*$ ]]; then
+              echo "$line" >> "$GITHUB_ENV"
+            else
+              echo "::error::Invalid environment variable format: $line"
+              exit 1
+            fi
+          fi
         done <<< "${{ inputs.extra_environment_variables }}"
 
     - name: Run tofu init
