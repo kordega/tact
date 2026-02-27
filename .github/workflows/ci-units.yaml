@@ -300,6 +300,13 @@ jobs:
           chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
           upload-artifact: ${{ matrix.upload-artifact }}
+          extra_environment_variables: |
+            TF_DATA_DIR=.tofu-data
+
+      - name: Assert custom TF_DATA_DIR is used by tofu plan
+        shell: bash
+        run: |
+          [ -d "${{ matrix.chroot-directory }}/.tofu-data" ]
 
       - name: Assert tofu plan change counts
         shell: bash
@@ -320,6 +327,8 @@ jobs:
           chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
           plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
+          extra_environment_variables: |
+            TF_DATA_DIR=.tofu-data
 
       - name: Run tofu apply with artifact
         id: tf-apply-with-artifact
@@ -329,6 +338,14 @@ jobs:
           chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
           plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
+          extra_environment_variables: |
+            TF_DATA_DIR=.tofu-data
+
+      - name: Assert custom TF_DATA_DIR is used by tofu apply
+        if: matrix.tofu-apply == 'true'
+        shell: bash
+        run: |
+          [ -d "${{ matrix.chroot-directory }}/.tofu-data" ]
 
       - name: Run tofu plan for destroy test fixture
         id: tf-plan-destroy
@@ -339,6 +356,8 @@ jobs:
           environment: ${{ matrix.tofu-version }}
           tofu-destroy: '${{ matrix.tofu-destroy }}'
           upload-artifact: '${{ matrix.upload-artifact }}'
+          extra_environment_variables: |
+            TF_DATA_DIR=.tofu-data
 
       - name: Run tofu apply for destroy test fixture
         id: tf-apply-destroy
@@ -348,6 +367,8 @@ jobs:
           chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
           plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
+          extra_environment_variables: |
+            TF_DATA_DIR=.tofu-data
 
   unit-taint:
     name: Unit - tofu-taint

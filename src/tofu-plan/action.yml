@@ -47,6 +47,12 @@ inputs:
       Accepts true/false. Defaults to true.
     required: false
     default: "true"
+  extra_environment_variables:
+    description: |
+      Additional environment variables to set before running tofu commands.
+      Provide one KEY=VALUE pair per line.
+    required: false
+    default: ""
 
 outputs:
   plan-file-path:
@@ -83,6 +89,14 @@ runs:
         echo "::group::Show tofu version"
         tofu version
         echo "::endgroup::"
+
+    - name: Configure extra environment variables
+      if: ${{ inputs.extra_environment_variables != '' }}
+      shell: bash
+      run: |
+        while IFS= read -r line; do
+          [ -n "$line" ] && echo "$line" >> "$GITHUB_ENV"
+        done <<< "${{ inputs.extra_environment_variables }}"
 
     - name: Run tofu init
       working-directory: ${{ inputs.chroot-directory }}
