@@ -39,26 +39,14 @@ jobs:
   tofu-fmt:
     runs-on: ubuntu-slim
     steps:
-      - name: Resolve tofu-actions source
-        id: workflow-source
-        shell: bash
-        run: |
-          workflow_ref='${{ github.workflow_ref }}'
-          if [[ "$workflow_ref" != *"/.github/workflows/"* || "$workflow_ref" != *"@"* ]]; then
-            echo "Unexpected github.workflow_ref format: $workflow_ref"
-            exit 1
-          fi
-          echo "repository=${workflow_ref%%/.github/workflows/*}" >> "$GITHUB_OUTPUT"
-          echo "ref=${workflow_ref#*@}" >> "$GITHUB_OUTPUT"
-
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Checkout tofu-actions
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          repository: ${{ steps.workflow-source.outputs.repository }}
-          ref: ${{ steps.workflow-source.outputs.ref }}
+          repository: limakzi/tofu-actions
+          ref: ${{ github.repository == 'limakzi/tofu-actions' && github.ref || 'main' }}
           path: .tofu-actions
 
       - name: Run tofu setup
@@ -79,26 +67,14 @@ jobs:
       plan-add-count: ${{ steps.tf-plan.outputs.plan-add-count }}
       plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
     steps:
-      - name: Resolve tofu-actions source
-        id: workflow-source
-        shell: bash
-        run: |
-          workflow_ref='${{ github.workflow_ref }}'
-          if [[ "$workflow_ref" != *"/.github/workflows/"* || "$workflow_ref" != *"@"* ]]; then
-            echo "Unexpected github.workflow_ref format: $workflow_ref"
-            exit 1
-          fi
-          echo "repository=${workflow_ref%%/.github/workflows/*}" >> "$GITHUB_OUTPUT"
-          echo "ref=${workflow_ref#*@}" >> "$GITHUB_OUTPUT"
-
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Checkout tofu-actions
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          repository: ${{ steps.workflow-source.outputs.repository }}
-          ref: ${{ steps.workflow-source.outputs.ref }}
+          repository: limakzi/tofu-actions
+          ref: ${{ github.repository == 'limakzi/tofu-actions' && github.ref || 'main' }}
           path: .tofu-actions
 
       - name: Run tofu setup
@@ -121,26 +97,14 @@ jobs:
     needs:
       - tofu-plan
     steps:
-      - name: Resolve tofu-actions source
-        id: workflow-source
-        shell: bash
-        run: |
-          workflow_ref='${{ github.workflow_ref }}'
-          if [[ "$workflow_ref" != *"/.github/workflows/"* || "$workflow_ref" != *"@"* ]]; then
-            echo "Unexpected github.workflow_ref format: $workflow_ref"
-            exit 1
-          fi
-          echo "repository=${workflow_ref%%/.github/workflows/*}" >> "$GITHUB_OUTPUT"
-          echo "ref=${workflow_ref#*@}" >> "$GITHUB_OUTPUT"
-
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Checkout tofu-actions
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          repository: ${{ steps.workflow-source.outputs.repository }}
-          ref: ${{ steps.workflow-source.outputs.ref }}
+          repository: limakzi/tofu-actions
+          ref: ${{ github.repository == 'limakzi/tofu-actions' && github.ref || 'main' }}
           path: .tofu-actions
 
       - name: Run tofu setup
