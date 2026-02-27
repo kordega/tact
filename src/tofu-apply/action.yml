@@ -65,25 +65,22 @@ runs:
           echo "plan-file-path=${{ inputs.plan-file-path }}" >> "$GITHUB_OUTPUT"
         fi
 
-    - name: Configure extra environment variables
-      if: ${{ inputs.extra_environment_variables != '' }}
+    - name: Run tofu init
+      working-directory: ${{ inputs.chroot-directory }}
+      env:
+        EXTRA_ENVIRONMENT_VARIABLES: ${{ inputs.extra_environment_variables }}
       shell: bash
       run: |
         while IFS= read -r line; do
           if [ -n "$line" ]; then
             if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*=.*$ ]]; then
-              echo "$line" >> "$GITHUB_ENV"
+              export "$line"
             else
               echo "::error::Invalid environment variable format: $line"
               exit 1
             fi
           fi
-        done <<< "${{ inputs.extra_environment_variables }}"
-
-    - name: Run tofu init
-      working-directory: ${{ inputs.chroot-directory }}
-      shell: bash
-      run: |
+        done <<< "$EXTRA_ENVIRONMENT_VARIABLES"
         echo "::group::Run tofu init"
         tofu init        \
           -input=false   \
@@ -92,8 +89,20 @@ runs:
 
     - name: Run tofu apply
       working-directory: ${{ inputs.chroot-directory }}
+      env:
+        EXTRA_ENVIRONMENT_VARIABLES: ${{ inputs.extra_environment_variables }}
       shell: bash
       run: |
+        while IFS= read -r line; do
+          if [ -n "$line" ]; then
+            if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*=.*$ ]]; then
+              export "$line"
+            else
+              echo "::error::Invalid environment variable format: $line"
+              exit 1
+            fi
+          fi
+        done <<< "$EXTRA_ENVIRONMENT_VARIABLES"
         echo "::group::Run tofu apply"
         tofu apply \
           -auto-approve \
