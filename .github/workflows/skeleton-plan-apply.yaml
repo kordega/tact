@@ -42,36 +42,69 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Run tofu setup
-        uses: limakzi/tofu-actions/src/tofu-setup@a0d33d407c985d055ce2c8baf36e2108708441fb
+      - name: Run tofu setup (local)
+        if: github.repository == 'limakzi/tofu-actions'
+        uses: ./src/tofu-setup
         with:
           tofu-version: ${{ inputs.tofu-version }}
           tofu-version-file: ${{ inputs.tofu-version-file }}
 
-      - name: Run tofu fmt
-        uses: limakzi/tofu-actions/src/tofu-fmt@a0d33d407c985d055ce2c8baf36e2108708441fb
+      - name: Run tofu setup (remote)
+        if: github.repository != 'limakzi/tofu-actions'
+        uses: limakzi/tofu-actions/src/tofu-setup@main
+        with:
+          tofu-version: ${{ inputs.tofu-version }}
+          tofu-version-file: ${{ inputs.tofu-version-file }}
+
+      - name: Run tofu fmt (local)
+        if: github.repository == 'limakzi/tofu-actions'
+        uses: ./src/tofu-fmt
+        with:
+          chroot-directory: ${{ inputs.chroot-directory }}
+
+      - name: Run tofu fmt (remote)
+        if: github.repository != 'limakzi/tofu-actions'
+        uses: limakzi/tofu-actions/src/tofu-fmt@main
         with:
           chroot-directory: ${{ inputs.chroot-directory }}
 
   tofu-plan:
     runs-on: ubuntu-slim
     outputs:
-      plan-has-changes: ${{ steps.tf-plan.outputs.plan-has-changes }}
-      plan-add-count: ${{ steps.tf-plan.outputs.plan-add-count }}
-      plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
+      plan-has-changes: ${{ steps.tf-plan-local.outputs.plan-has-changes || steps.tf-plan-remote.outputs.plan-has-changes }}
+      plan-add-count: ${{ steps.tf-plan-local.outputs.plan-add-count || steps.tf-plan-remote.outputs.plan-add-count }}
+      plan-artifact-name: ${{ steps.tf-plan-local.outputs.plan-artifact-name || steps.tf-plan-remote.outputs.plan-artifact-name }}
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Run tofu setup
-        uses: limakzi/tofu-actions/src/tofu-setup@a0d33d407c985d055ce2c8baf36e2108708441fb
+      - name: Run tofu setup (local)
+        if: github.repository == 'limakzi/tofu-actions'
+        uses: ./src/tofu-setup
         with:
           tofu-version: ${{ inputs.tofu-version }}
           tofu-version-file: ${{ inputs.tofu-version-file }}
 
-      - name: Run tofu plan
-        id: tf-plan
-        uses: limakzi/tofu-actions/src/tofu-plan@a0d33d407c985d055ce2c8baf36e2108708441fb
+      - name: Run tofu setup (remote)
+        if: github.repository != 'limakzi/tofu-actions'
+        uses: limakzi/tofu-actions/src/tofu-setup@main
+        with:
+          tofu-version: ${{ inputs.tofu-version }}
+          tofu-version-file: ${{ inputs.tofu-version-file }}
+
+      - name: Run tofu plan (local)
+        if: github.repository == 'limakzi/tofu-actions'
+        id: tf-plan-local
+        uses: ./src/tofu-plan
+        with:
+          chroot-directory: ${{ inputs.chroot-directory }}
+          environment: ${{ inputs.environment }}
+          upload-artifact: 'true'
+
+      - name: Run tofu plan (remote)
+        if: github.repository != 'limakzi/tofu-actions'
+        id: tf-plan-remote
+        uses: limakzi/tofu-actions/src/tofu-plan@main
         with:
           chroot-directory: ${{ inputs.chroot-directory }}
           environment: ${{ inputs.environment }}
@@ -86,14 +119,31 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Run tofu setup
-        uses: limakzi/tofu-actions/src/tofu-setup@a0d33d407c985d055ce2c8baf36e2108708441fb
+      - name: Run tofu setup (local)
+        if: github.repository == 'limakzi/tofu-actions'
+        uses: ./src/tofu-setup
         with:
           tofu-version: ${{ inputs.tofu-version }}
           tofu-version-file: ${{ inputs.tofu-version-file }}
 
-      - name: Run tofu apply
-        uses: limakzi/tofu-actions/src/tofu-apply@a0d33d407c985d055ce2c8baf36e2108708441fb
+      - name: Run tofu setup (remote)
+        if: github.repository != 'limakzi/tofu-actions'
+        uses: limakzi/tofu-actions/src/tofu-setup@main
+        with:
+          tofu-version: ${{ inputs.tofu-version }}
+          tofu-version-file: ${{ inputs.tofu-version-file }}
+
+      - name: Run tofu apply (local)
+        if: github.repository == 'limakzi/tofu-actions'
+        uses: ./src/tofu-apply
+        with:
+          chroot-directory: ${{ inputs.chroot-directory }}
+          environment: ${{ inputs.environment }}
+          plan-artifact-name: ${{ needs.tofu-plan.outputs.plan-artifact-name }}
+
+      - name: Run tofu apply (remote)
+        if: github.repository != 'limakzi/tofu-actions'
+        uses: limakzi/tofu-actions/src/tofu-apply@main
         with:
           chroot-directory: ${{ inputs.chroot-directory }}
           environment: ${{ inputs.environment }}
