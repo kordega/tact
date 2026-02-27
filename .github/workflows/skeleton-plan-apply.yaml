@@ -51,7 +51,7 @@ jobs:
 
       - name: Run tofu setup (remote)
         if: github.repository != 'limakzi/tofu-actions'
-        uses: limakzi/tofu-actions/src/tofu-setup@main
+        uses: limakzi/tofu-actions/src/tofu-setup@a0d33d407c985d055ce2c8baf36e2108708441fb
         with:
           tofu-version: ${{ inputs.tofu-version }}
           tofu-version-file: ${{ inputs.tofu-version-file }}
@@ -64,16 +64,16 @@ jobs:
 
       - name: Run tofu fmt (remote)
         if: github.repository != 'limakzi/tofu-actions'
-        uses: limakzi/tofu-actions/src/tofu-fmt@main
+        uses: limakzi/tofu-actions/src/tofu-fmt@a0d33d407c985d055ce2c8baf36e2108708441fb
         with:
           chroot-directory: ${{ inputs.chroot-directory }}
 
   tofu-plan:
     runs-on: ubuntu-slim
     outputs:
-      plan-has-changes: ${{ steps.tf-plan-local.outputs.plan-has-changes || steps.tf-plan-remote.outputs.plan-has-changes }}
-      plan-add-count: ${{ steps.tf-plan-local.outputs.plan-add-count || steps.tf-plan-remote.outputs.plan-add-count }}
-      plan-artifact-name: ${{ steps.tf-plan-local.outputs.plan-artifact-name || steps.tf-plan-remote.outputs.plan-artifact-name }}
+      plan-has-changes: ${{ steps.tf-plan-selected.outputs.plan-has-changes }}
+      plan-add-count: ${{ steps.tf-plan-selected.outputs.plan-add-count }}
+      plan-artifact-name: ${{ steps.tf-plan-selected.outputs.plan-artifact-name }}
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -87,7 +87,7 @@ jobs:
 
       - name: Run tofu setup (remote)
         if: github.repository != 'limakzi/tofu-actions'
-        uses: limakzi/tofu-actions/src/tofu-setup@main
+        uses: limakzi/tofu-actions/src/tofu-setup@a0d33d407c985d055ce2c8baf36e2108708441fb
         with:
           tofu-version: ${{ inputs.tofu-version }}
           tofu-version-file: ${{ inputs.tofu-version-file }}
@@ -104,11 +104,32 @@ jobs:
       - name: Run tofu plan (remote)
         if: github.repository != 'limakzi/tofu-actions'
         id: tf-plan-remote
-        uses: limakzi/tofu-actions/src/tofu-plan@main
+        uses: limakzi/tofu-actions/src/tofu-plan@a0d33d407c985d055ce2c8baf36e2108708441fb
         with:
           chroot-directory: ${{ inputs.chroot-directory }}
           environment: ${{ inputs.environment }}
           upload-artifact: 'true'
+
+      - name: Set selected plan outputs
+        id: tf-plan-selected
+        shell: bash
+        env:
+          LOCAL_PLAN_HAS_CHANGES: ${{ steps.tf-plan-local.outputs.plan-has-changes }}
+          LOCAL_PLAN_ADD_COUNT: ${{ steps.tf-plan-local.outputs.plan-add-count }}
+          LOCAL_PLAN_ARTIFACT_NAME: ${{ steps.tf-plan-local.outputs.plan-artifact-name }}
+          REMOTE_PLAN_HAS_CHANGES: ${{ steps.tf-plan-remote.outputs.plan-has-changes }}
+          REMOTE_PLAN_ADD_COUNT: ${{ steps.tf-plan-remote.outputs.plan-add-count }}
+          REMOTE_PLAN_ARTIFACT_NAME: ${{ steps.tf-plan-remote.outputs.plan-artifact-name }}
+        run: |
+          if [[ "$GITHUB_REPOSITORY" == "limakzi/tofu-actions" ]]; then
+            echo "plan-has-changes=$LOCAL_PLAN_HAS_CHANGES" >> "$GITHUB_OUTPUT"
+            echo "plan-add-count=$LOCAL_PLAN_ADD_COUNT" >> "$GITHUB_OUTPUT"
+            echo "plan-artifact-name=$LOCAL_PLAN_ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+          else
+            echo "plan-has-changes=$REMOTE_PLAN_HAS_CHANGES" >> "$GITHUB_OUTPUT"
+            echo "plan-add-count=$REMOTE_PLAN_ADD_COUNT" >> "$GITHUB_OUTPUT"
+            echo "plan-artifact-name=$REMOTE_PLAN_ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+          fi
 
   tofu-apply:
     if: needs.tofu-plan.outputs.plan-has-changes == 'true'
@@ -128,7 +149,7 @@ jobs:
 
       - name: Run tofu setup (remote)
         if: github.repository != 'limakzi/tofu-actions'
-        uses: limakzi/tofu-actions/src/tofu-setup@main
+        uses: limakzi/tofu-actions/src/tofu-setup@a0d33d407c985d055ce2c8baf36e2108708441fb
         with:
           tofu-version: ${{ inputs.tofu-version }}
           tofu-version-file: ${{ inputs.tofu-version-file }}
@@ -143,7 +164,7 @@ jobs:
 
       - name: Run tofu apply (remote)
         if: github.repository != 'limakzi/tofu-actions'
-        uses: limakzi/tofu-actions/src/tofu-apply@main
+        uses: limakzi/tofu-actions/src/tofu-apply@a0d33d407c985d055ce2c8baf36e2108708441fb
         with:
           chroot-directory: ${{ inputs.chroot-directory }}
           environment: ${{ inputs.environment }}
