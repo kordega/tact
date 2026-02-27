@@ -42,21 +42,14 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Checkout tofu-actions
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          repository: limakzi/tofu-actions
-          ref: ${{ github.repository == 'limakzi/tofu-actions' && github.ref || 'main' }}
-          path: .tofu-actions
-
       - name: Run tofu setup
-        uses: ./.tofu-actions/src/tofu-setup
+        uses: limakzi/tofu-actions/src/tofu-setup@main
         with:
           tofu-version: ${{ inputs.tofu-version }}
           tofu-version-file: ${{ inputs.tofu-version-file }}
 
       - name: Run tofu fmt
-        uses: ./.tofu-actions/src/tofu-fmt
+        uses: limakzi/tofu-actions/src/tofu-fmt@main
         with:
           chroot-directory: ${{ inputs.chroot-directory }}
 
@@ -70,22 +63,15 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Checkout tofu-actions
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          repository: limakzi/tofu-actions
-          ref: ${{ github.repository == 'limakzi/tofu-actions' && github.ref || 'main' }}
-          path: .tofu-actions
-
       - name: Run tofu setup
-        uses: ./.tofu-actions/src/tofu-setup
+        uses: limakzi/tofu-actions/src/tofu-setup@main
         with:
           tofu-version: ${{ inputs.tofu-version }}
           tofu-version-file: ${{ inputs.tofu-version-file }}
 
       - name: Run tofu plan
         id: tf-plan
-        uses: ./.tofu-actions/src/tofu-plan
+        uses: limakzi/tofu-actions/src/tofu-plan@main
         with:
           chroot-directory: ${{ inputs.chroot-directory }}
           environment: ${{ inputs.environment }}
@@ -100,21 +86,14 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Checkout tofu-actions
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          repository: limakzi/tofu-actions
-          ref: ${{ github.repository == 'limakzi/tofu-actions' && github.ref || 'main' }}
-          path: .tofu-actions
-
       - name: Run tofu setup
-        uses: ./.tofu-actions/src/tofu-setup
+        uses: limakzi/tofu-actions/src/tofu-setup@main
         with:
           tofu-version: ${{ inputs.tofu-version }}
           tofu-version-file: ${{ inputs.tofu-version-file }}
 
       - name: Run tofu apply
-        uses: ./.tofu-actions/src/tofu-apply
+        uses: limakzi/tofu-actions/src/tofu-apply@main
         with:
           chroot-directory: ${{ inputs.chroot-directory }}
           environment: ${{ inputs.environment }}
