@@ -103,7 +103,7 @@ jobs:
           [[ "$TOFU_PLUGIN_CACHE_DIR" = "$RUNNER_TEMP"/tofu-provider-cache-*/.opentofu/plugin-cache ]]
           [[ "$TF_PLUGIN_CACHE_DIR" = "$TOFU_PLUGIN_CACHE_DIR" ]]
           [[ "$TOFU_PROVIDER_CACHE_DIR" = "$TOFU_PLUGIN_CACHE_DIR" ]]
-          [[ "$TOFU_PLUGIN_CACHE_DIR" != "$HOME/"* ]]
+          [[ "$TOFU_PLUGIN_CACHE_DIR" != "$HOME/.terraform.d/plugin-cache" ]]
           [[ -d "$TOFU_PLUGIN_CACHE_DIR" ]]
 
   unit-setup-version-file:
