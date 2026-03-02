@@ -66,10 +66,9 @@ runs:
       if: ${{ inputs.provider-cache == 'true' }}
       uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
       with:
-        path: ${{ env.HOME }}/.terraform.d/plugin-cache
-        key: tofu-providers-${{ runner.os }}-${{ inputs.tofu-version || inputs.tofu-version-file || 'auto' }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+        path: ~/.terraform.d/plugin-cache
+        key: tofu-providers-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') || 'no-lockfile' }}
         restore-keys: |
-          tofu-providers-${{ runner.os }}-${{ inputs.tofu-version || inputs.tofu-version-file || 'auto' }}-
           tofu-providers-${{ runner.os }}-
 
     - name: Install tofu-cli
