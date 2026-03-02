@@ -97,6 +97,15 @@ jobs:
           [ "$(tofu version -json | jq -r '.terraform_version')" = "${{ matrix.tofu-version }}" ] && exit 0 || exit 1
           echo "::endgroup::"
 
+      - name: Assert provider cache path
+        shell: bash
+        run: |
+          [[ "$TOFU_PLUGIN_CACHE_DIR" = "$RUNNER_TEMP"/tofu-provider-cache-*/.opentofu/plugin-cache ]]
+          [[ "$TF_PLUGIN_CACHE_DIR" = "$TOFU_PLUGIN_CACHE_DIR" ]]
+          [[ "$TOFU_PROVIDER_CACHE_DIR" = "$TOFU_PLUGIN_CACHE_DIR" ]]
+          [[ "$TOFU_PLUGIN_CACHE_DIR" != "$HOME/.terraform.d/plugin-cache" ]]
+          [[ -d "$TOFU_PLUGIN_CACHE_DIR" ]]
+
   unit-setup-version-file:
     name: Unit / tofu-setup with tofu-version-file
     needs:

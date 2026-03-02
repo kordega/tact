@@ -56,17 +56,20 @@ runs:
       if: ${{ inputs.provider-cache == 'true' }}
       shell: bash
       run: |
-        mkdir -p "$HOME/.terraform.d/plugin-cache"
+        cache_root="$(mktemp -d "$RUNNER_TEMP/tofu-provider-cache-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-0}-XXXXXX")"
+        cache_dir="$cache_root/.opentofu/plugin-cache"
+        mkdir -p "$cache_dir"
         {
-          echo "TF_PLUGIN_CACHE_DIR=$HOME/.terraform.d/plugin-cache"
-          echo "TOFU_PLUGIN_CACHE_DIR=$HOME/.terraform.d/plugin-cache"
+          echo "TOFU_PROVIDER_CACHE_DIR=$cache_dir"
+          echo "TF_PLUGIN_CACHE_DIR=$cache_dir"
+          echo "TOFU_PLUGIN_CACHE_DIR=$cache_dir"
         } >> "$GITHUB_ENV"
 
     - name: Cache opentofu providers
       if: ${{ inputs.provider-cache == 'true' }}
       uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
       with:
-        path: ~/.terraform.d/plugin-cache
+        path: ${{ env.TOFU_PROVIDER_CACHE_DIR }}
         key: tofu-providers-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') || 'no-lockfile' }}
         restore-keys: |
           tofu-providers-${{ runner.os }}-
