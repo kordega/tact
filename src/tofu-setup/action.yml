@@ -56,7 +56,8 @@ runs:
       if: ${{ inputs.provider-cache == 'true' }}
       shell: bash
       run: |
-        cache_dir="$RUNNER_TEMP/tofu-provider-cache-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-0}-${RANDOM}/.opentofu/plugin-cache"
+        cache_root="$(mktemp -d "$RUNNER_TEMP/tofu-provider-cache-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-0}-XXXXXX")"
+        cache_dir="$cache_root/.opentofu/plugin-cache"
         mkdir -p "$cache_dir"
         {
           echo "TOFU_PROVIDER_CACHE_DIR=$cache_dir"

@@ -100,7 +100,7 @@ jobs:
       - name: Assert provider cache path
         shell: bash
         run: |
-          [[ "$TOFU_PLUGIN_CACHE_DIR" == "$RUNNER_TEMP"/tofu-provider-cache-*/.opentofu/plugin-cache ]]
+          [[ "$TOFU_PLUGIN_CACHE_DIR" = "$RUNNER_TEMP"/tofu-provider-cache-*/.opentofu/plugin-cache ]]
           [[ "$TF_PLUGIN_CACHE_DIR" = "$TOFU_PLUGIN_CACHE_DIR" ]]
           [[ "$TOFU_PROVIDER_CACHE_DIR" = "$TOFU_PLUGIN_CACHE_DIR" ]]
           [[ "$TOFU_PLUGIN_CACHE_DIR" != "$HOME/"* ]]
