@@ -37,6 +37,12 @@ inputs:
       Whether to use GitHub Actions tool-cache to store and reuse downloaded OpenTofu binaries. 
       Defaults to false.
     required: false
+  provider-cache:
+    description: |
+      Whether to cache OpenTofu providers and registry metadata between workflow runs.
+      Defaults to true.
+    required: false
+    default: "true"
   github-token:
     description: |
       Override the GitHub token read from the environment variable. 
@@ -46,6 +52,26 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Prepare provider cache directory
+      if: ${{ inputs.provider-cache == 'true' }}
+      shell: bash
+      run: |
+        mkdir -p "$HOME/.terraform.d/plugin-cache"
+        {
+          echo "TF_PLUGIN_CACHE_DIR=$HOME/.terraform.d/plugin-cache"
+          echo "TOFU_PLUGIN_CACHE_DIR=$HOME/.terraform.d/plugin-cache"
+        } >> "$GITHUB_ENV"
+
+    - name: Cache OpenTofu providers
+      if: ${{ inputs.provider-cache == 'true' }}
+      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      with:
+        path: ${{ env.HOME }}/.terraform.d/plugin-cache
+        key: tofu-providers-${{ runner.os }}-${{ inputs.tofu-version || inputs.tofu-version-file || 'auto' }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+        restore-keys: |
+          tofu-providers-${{ runner.os }}-${{ inputs.tofu-version || inputs.tofu-version-file || 'auto' }}-
+          tofu-providers-${{ runner.os }}-
+
     - name: Install tofu-cli
       uses: opentofu/setup-opentofu@9d84900f3238fab8cd84ce47d658d25dd008be2f # v1
       with:
