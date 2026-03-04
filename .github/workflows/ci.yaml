@@ -111,18 +111,18 @@ jobs:
       matrix:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
-          - tst/module-with-tests
+          - test-fixtures/module-with-tests
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Run tofu setup
-        uses: ./src/tofu-setup
+        uses: ./actions/tofu-setup
         with:
           tofu-version: ${{ matrix.tofu-version }}
 
       - name: Run tofu test
-        uses: ./src/tofu-test
+        uses: ./actions/tofu-test
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
 

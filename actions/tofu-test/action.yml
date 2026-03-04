@@ -1,0 +1,35 @@
+---
+name: tofu-test
+description: Run tofu test
+author: Kamil Zabielski
+
+branding:
+  icon: git-merge
+  color: gray-dark
+
+inputs:
+  chroot-directory:
+    description: Directory to chroot into before running tofu test
+    required: false
+    default: "."
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run tofu init
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        echo "::group::Run tofu init"
+        tofu init        \
+          -input=false   \
+          -backend=false
+        echo "::endgroup::"
+
+    - name: Run tofu test
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        echo "::group::Run tofu test"
+        tofu test
+        echo "::endgroup::"
