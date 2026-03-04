@@ -4,7 +4,7 @@ description: Run tofu plan
 author: Kamil Zabielski
 
 branding:
-  icon: git-merge
+  icon: eye
   color: gray-dark
 
 inputs:

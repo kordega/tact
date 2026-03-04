@@ -4,7 +4,7 @@ description: Taint a resource using tofu
 author: Kamil Zabielski
 
 branding:
-  icon: git-merge
+  icon: alert-triangle
   color: gray-dark
 
 inputs:

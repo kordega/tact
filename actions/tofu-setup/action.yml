@@ -4,7 +4,7 @@ description: Setup tofu cli
 author: Kamil Zabielski
 
 branding:
-  icon: git-merge
+  icon: download
   color: gray-dark
 
 inputs:

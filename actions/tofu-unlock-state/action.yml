@@ -4,7 +4,7 @@ description: Unlock the state for the current tofu configuration
 author: Kamil Zabielski
 
 branding:
-  icon: git-merge
+  icon: unlock
   color: gray-dark
 
 inputs:
