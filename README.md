@@ -1,6 +1,6 @@
 ## tact
 
-[![Tofu support](https://img.shields.io/badge/OpenTofu-supported-4c1?logo=opentofu&logoColor=white)](https://github.com/opentofu/opentofu)
+[![Tofu support](https://img.shields.io/badge/OpenTofu-supported-green?logo=opentofu&logoColor=white)](https://github.com/opentofu/opentofu)
 [![Tofu FAQ](https://img.shields.io/badge/Tofu-FAQ-blue)](https://opentofu.org/docs/)
 [![Get tofu help](https://img.shields.io/badge/Tofu-help%20%26%20support-6f42c1)](https://github.com/kortega-com/tact/issues/new/choose)
 
