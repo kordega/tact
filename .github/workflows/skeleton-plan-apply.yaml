@@ -50,13 +50,13 @@ jobs:
           path: .tact
 
       - name: Run tofu setup
-        uses: ./.tact/src/tofu-setup
+        uses: ./.tact/actions/tofu-setup
         with:
           tofu-version: ${{ inputs.tofu-version }}
           tofu-version-file: ${{ inputs.tofu-version-file }}
 
       - name: Run tofu fmt
-        uses: ./.tact/src/tofu-fmt
+        uses: ./.tact/actions/tofu-fmt
         with:
           chroot-directory: ${{ inputs.chroot-directory }}
 
@@ -78,14 +78,14 @@ jobs:
           path: .tact
 
       - name: Run tofu setup
-        uses: ./.tact/src/tofu-setup
+        uses: ./.tact/actions/tofu-setup
         with:
           tofu-version: ${{ inputs.tofu-version }}
           tofu-version-file: ${{ inputs.tofu-version-file }}
 
       - name: Run tofu plan
         id: tf-plan
-        uses: ./.tact/src/tofu-plan
+        uses: ./.tact/actions/tofu-plan
         with:
           chroot-directory: ${{ inputs.chroot-directory }}
           environment: ${{ inputs.environment }}
@@ -108,13 +108,13 @@ jobs:
           path: .tact
 
       - name: Run tofu setup
-        uses: ./.tact/src/tofu-setup
+        uses: ./.tact/actions/tofu-setup
         with:
           tofu-version: ${{ inputs.tofu-version }}
           tofu-version-file: ${{ inputs.tofu-version-file }}
 
       - name: Run tofu apply
-        uses: ./.tact/src/tofu-apply
+        uses: ./.tact/actions/tofu-apply
         with:
           chroot-directory: ${{ inputs.chroot-directory }}
           environment: ${{ inputs.environment }}
