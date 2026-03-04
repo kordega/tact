@@ -81,7 +81,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Run tofu setup
-        uses: ./src/tofu-setup
+        uses: ./actions/tofu-setup
         id: tofu-setup
         with:
           tofu-version: ${{ matrix.tofu-version }}
@@ -124,7 +124,7 @@ jobs:
           echo "${{ env.tofu-version }}" > .cache/tofu-version.txt
 
       - name: Run tofu setup with tofu version file
-        uses: ./src/tofu-setup
+        uses: ./actions/tofu-setup
         id: tofu-setup
         with:
           tofu-version-file: .cache/tofu-version.txt
@@ -151,13 +151,13 @@ jobs:
       matrix:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases-with-lockfile) }}
         chroot-directory:
-          - tst/unlock-state
+          - test-fixtures/unlock-state
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Run tofu setup
-        uses: ./src/tofu-setup
+        uses: ./actions/tofu-setup
         with:
           tofu-version: ${{ matrix.tofu-version }}
 
@@ -206,7 +206,7 @@ jobs:
                 --content-type application/json
 
       - name: Run tofu unlock-state
-        uses: ./src/tofu-unlock-state
+        uses: ./actions/tofu-unlock-state
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
           lock-id: test-lock-id
@@ -230,25 +230,25 @@ jobs:
       matrix:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
-          - tst/fmt-passed
-          - tst/fmt-failed
+          - test-fixtures/fmt-passed
+          - test-fixtures/fmt-failed
         include:
-          - chroot-directory: tst/fmt-passed
+          - chroot-directory: test-fixtures/fmt-passed
             status-code: '0'
-          - chroot-directory: tst/fmt-failed
+          - chroot-directory: test-fixtures/fmt-failed
             status-code: '3'
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Run tofu setup
-        uses: ./src/tofu-setup
+        uses: ./actions/tofu-setup
         with:
           tofu-version: ${{ matrix.tofu-version }}
 
       - name: Run tofu fmt
         id: tf-fmt
-        uses: ./src/tofu-fmt
+        uses: ./actions/tofu-fmt
         continue-on-error: true
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
@@ -266,25 +266,25 @@ jobs:
       matrix:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
-          - tst/plan-with-changes
-          - tst/plan-without-changes
-          - tst/plan-with-sops
+          - test-fixtures/plan-with-changes
+          - test-fixtures/plan-without-changes
+          - test-fixtures/plan-with-sops
         include:
-          - chroot-directory: tst/plan-with-changes
+          - chroot-directory: test-fixtures/plan-with-changes
             plan-has-changes: 'true'
             plan-add-count: '1'
             upload-artifact: 'false'
             tofu-apply: 'true'
             tofu-destroy: 'true'
             sops-age-key: ''
-          - chroot-directory: tst/plan-without-changes
+          - chroot-directory: test-fixtures/plan-without-changes
             plan-has-changes: 'false'
             plan-add-count: '0'
             upload-artifact: 'false'
             tofu-apply: 'true'
             tofu-destroy: 'true'
             sops-age-key: ''
-          - chroot-directory: tst/plan-with-sops
+          - chroot-directory: test-fixtures/plan-with-sops
             plan-has-changes: 'true'
             plan-add-count: '1'
             upload-artifact: 'false'
@@ -298,13 +298,13 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Run tofu setup
-        uses: ./src/tofu-setup
+        uses: ./actions/tofu-setup
         with:
           tofu-version: ${{ matrix.tofu-version }}
 
       - name: Run tofu plan for apply test fixture
         id: tf-plan
-        uses: ./src/tofu-plan
+        uses: ./actions/tofu-plan
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
@@ -323,7 +323,7 @@ jobs:
 
       - name: Run tofu apply without artifact
         id: tf-apply-no-artifact
-        uses: ./src/tofu-apply
+        uses: ./actions/tofu-apply
         if: matrix.tofu-apply == 'true' && matrix.upload-artifact == 'false'
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
@@ -332,7 +332,7 @@ jobs:
 
       - name: Run tofu apply with artifact
         id: tf-apply-with-artifact
-        uses: ./src/tofu-apply
+        uses: ./actions/tofu-apply
         if: matrix.tofu-apply == 'true' && matrix.upload-artifact == 'true'
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
@@ -341,7 +341,7 @@ jobs:
 
       - name: Run tofu plan for destroy test fixture
         id: tf-plan-destroy
-        uses: ./src/tofu-plan
+        uses: ./actions/tofu-plan
         if: matrix.tofu-destroy == 'true'
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
@@ -351,7 +351,7 @@ jobs:
 
       - name: Run tofu apply for destroy test fixture
         id: tf-apply-destroy
-        uses: ./src/tofu-apply
+        uses: ./actions/tofu-apply
         if: matrix.tofu-destroy == 'true'
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
@@ -369,32 +369,32 @@ jobs:
       matrix:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
-          - tst/taint-resource
+          - test-fixtures/taint-resource
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Run tofu setup
-        uses: ./src/tofu-setup
+        uses: ./actions/tofu-setup
         with:
           tofu-version: ${{ matrix.tofu-version }}
 
       - name: Run tofu plan for taint test fixture
         id: tf-plan
-        uses: ./src/tofu-plan
+        uses: ./actions/tofu-plan
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
           upload-artifact: 'false'
 
       - name: Run tofu apply to create state
-        uses: ./src/tofu-apply
+        uses: ./actions/tofu-apply
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
           plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
 
       - name: Run tofu taint
-        uses: ./src/tofu-taint
+        uses: ./actions/tofu-taint
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
           address: time_static.this
@@ -420,19 +420,19 @@ jobs:
       matrix:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
-          - tst/plan-with-import
+          - test-fixtures/plan-with-import
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Run tofu setup
-        uses: ./src/tofu-setup
+        uses: ./actions/tofu-setup
         with:
           tofu-version: ${{ matrix.tofu-version }}
 
       - name: Run tofu plan for import test fixture
         id: tf-plan
-        uses: ./src/tofu-plan
+        uses: ./actions/tofu-plan
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
@@ -445,7 +445,7 @@ jobs:
           [ "${{ steps.tf-plan.outputs.plan-import-count }}" = "1" ]
 
       - name: Run tofu apply to import resource
-        uses: ./src/tofu-apply
+        uses: ./actions/tofu-apply
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
           plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
@@ -473,19 +473,19 @@ jobs:
         tofu-version:
           - 1.11.5
         chroot-directory:
-          - tst/plan-with-changes
+          - test-fixtures/plan-with-changes
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Run tofu setup
-        uses: ./src/tofu-setup
+        uses: ./actions/tofu-setup
         with:
           tofu-version: ${{ matrix.tofu-version }}
 
       - name: Run tofu plan
         id: tf-plan
-        uses: ./src/tofu-plan
+        uses: ./actions/tofu-plan
         with:
           chroot-directory: ${{ matrix.chroot-directory }}
           environment: integration
@@ -507,23 +507,23 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Run tofu setup
-        uses: ./src/tofu-setup
+        uses: ./actions/tofu-setup
         with:
           tofu-version: ${{ needs.integration-plan.outputs.tofu-version }}
 
       - name: Run tofu apply with artifact
         id: tf-apply-with-artifact
-        uses: ./src/tofu-apply
+        uses: ./actions/tofu-apply
         with:
-          chroot-directory: tst/plan-with-changes
+          chroot-directory: test-fixtures/plan-with-changes
           environment: integration
           plan-artifact-name: ${{ needs.integration-plan.outputs.plan-artifact-name }}
 
       - name: Run tofu plan for destroy
         id: tf-plan-destroy
-        uses: ./src/tofu-plan
+        uses: ./actions/tofu-plan
         with:
-          chroot-directory: tst/plan-with-changes
+          chroot-directory: test-fixtures/plan-with-changes
           environment: integration
           tofu-destroy: 'true'
           upload-artifact: 'false'
@@ -536,9 +536,9 @@ jobs:
 
       - name: Run tofu apply for destroy
         id: tf-apply-destroy
-        uses: ./src/tofu-apply
+        uses: ./actions/tofu-apply
         with:
-          chroot-directory: tst/plan-with-changes
+          chroot-directory: test-fixtures/plan-with-changes
           environment: integration
           plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
 
@@ -550,8 +550,8 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - chroot-directory: tst/plan-with-changes
-          - chroot-directory: tst/plan-without-changes
+          - chroot-directory: test-fixtures/plan-with-changes
+          - chroot-directory: test-fixtures/plan-without-changes
     uses: ./.github/workflows/skeleton-plan-apply.yaml
     secrets: inherit
     with:
@@ -567,11 +567,11 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - chroot-directory: tst/plan-with-changes
-          - chroot-directory: tst/plan-without-changes
+          - chroot-directory: test-fixtures/plan-with-changes
+          - chroot-directory: test-fixtures/plan-without-changes
     uses: ./.github/workflows/skeleton-plan-apply.yaml
     secrets: inherit
     with:
-      tofu-version-file: tst/tofu-version
+      tofu-version-file: test-fixtures/tofu-version
       chroot-directory: ${{ matrix.chroot-directory }}
       environment: integration

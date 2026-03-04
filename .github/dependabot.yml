@@ -4,11 +4,11 @@ updates:
   - package-ecosystem: "github-actions"
     directories:
       - "/.github/workflows"
-      - "/src/*"
+      - "/actions/*"
     schedule:
       interval: "weekly"
   - package-ecosystem: "terraform"
     directories:
-      - "/tst/*"
+      - "/test-fixtures/*"
     schedule:
       interval: "weekly"
