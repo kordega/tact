@@ -461,7 +461,7 @@ jobs:
           '
 
   integration-plan:
-    name: integration / plan
+    name: integration / create plan artifact
     runs-on: ubuntu-slim
     outputs:
       plan-has-changes: ${{ steps.tf-plan.outputs.plan-has-changes }}
@@ -475,15 +475,15 @@ jobs:
         chroot-directory:
           - tst/plan-with-changes
     steps:
-      - name: Checkout the repository
+      - name: Checkout repository for integration fixture
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Run tofu setup
+      - name: Install OpenTofu for integration fixture
         uses: ./src/tofu-setup
         with:
           tofu-version: ${{ matrix.tofu-version }}
 
-      - name: Run tofu plan
+      - name: Create integration plan and upload artifact
         id: tf-plan
         uses: ./src/tofu-plan
         with:
@@ -491,7 +491,7 @@ jobs:
           environment: integration
           upload-artifact: 'true'
 
-      - name: Assert resources to be added
+      - name: Verify integration plan reports one resource to add
         shell: bash
         run: |
           [[ "${{ steps.tf-plan.outputs.plan-has-changes }}" = "true" ]]
