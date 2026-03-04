@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   actionlint:
-    name: Lint / actionlint
+    name: lint / actionlint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the repository
@@ -25,7 +25,7 @@ jobs:
           actionlint_flags: .github/workflows/*.yaml
 
   get-tofu-releases:
-    name: Setup / Prepare tofu releases
+    name: setup / prepare tofu releases
     runs-on: ubuntu-slim
     outputs:
       releases: ${{ steps.read-releases.outputs.releases }}
@@ -143,7 +143,7 @@ jobs:
           exit "$status"
 
   unit-unlock-state:
-    name: Unit - tofu-unlock
+    name: unit - tofu-unlock
     runs-on: ubuntu-latest
     needs:
       - get-tofu-releases
@@ -222,7 +222,7 @@ jobs:
             --region us-east-1
 
   unit-fmt:
-    name: Unit - tofu-fmt
+    name: unit - tofu-fmt
     runs-on: ubuntu-slim
     needs: 
       - get-tofu-releases
@@ -258,7 +258,7 @@ jobs:
         run: exit 1
 
   unit-plan:
-    name: Unit - tofu-plan
+    name: unit - tofu-plan
     runs-on: ubuntu-slim
     needs: 
       - get-tofu-releases
@@ -359,7 +359,7 @@ jobs:
           plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
 
   unit-taint:
-    name: Unit - tofu-taint
+    name: unit - tofu-taint
     runs-on: ubuntu-slim
     needs:
       - get-tofu-releases
@@ -410,7 +410,7 @@ jobs:
           '
 
   unit-import:
-    name: Unit - tofu-import
+    name: unit - tofu-import
     runs-on: ubuntu-slim
     needs:
       - get-tofu-releases
@@ -461,7 +461,7 @@ jobs:
           '
 
   integration-plan:
-    name: Integration / Plan
+    name: integration / plan
     runs-on: ubuntu-slim
     outputs:
       plan-has-changes: ${{ steps.tf-plan.outputs.plan-has-changes }}
@@ -498,7 +498,7 @@ jobs:
           [[ "${{ steps.tf-plan.outputs.plan-add-count }}" = "1" ]]
 
   integration-apply-with-artifact:
-    name: Integration / Apply with artifact
+    name: integration / apply with artifact
     runs-on: ubuntu-slim
     needs: 
       - integration-plan
@@ -543,7 +543,7 @@ jobs:
           plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
 
   integration-skeleton:
-    name: Integration / Skeleton (${{ matrix.chroot-directory }})
+    name: integration / skeleton (${{ matrix.chroot-directory }})
     needs:
       - integration-plan
     strategy:
@@ -560,7 +560,7 @@ jobs:
       environment: integration
 
   integration-skeleton-version-file:
-    name: Integration / Skeleton version file
+    name: integration / skeleton version file
     needs:
       - integration-plan
     strategy:
