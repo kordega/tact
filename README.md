@@ -10,4 +10,3 @@ If you need help using the OpenTofu actions in this repository, use these resour
 
 - **FAQ / docs:** [OpenTofu documentation](https://opentofu.org/docs/)
 - **Report issues:** [Open a GitHub issue](https://github.com/kortega-com/tact/issues/new/choose)
-- **Find common OpenTofu issues:** [Search existing issues for `OpenTofu`](https://github.com/kortega-com/tact/issues?q=is%3Aissue+OpenTofu)
