@@ -5,7 +5,7 @@ on:
   workflow_call:
     inputs:
       tofu-version:
-        description: Version of OpenTofu to install.
+        description: Version of opentofu to install.
         required: false
         type: string
       tofu-version-file:
