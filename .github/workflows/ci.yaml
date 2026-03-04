@@ -68,7 +68,7 @@ jobs:
           echo "releases-with-lockfile=$releases_with_lockfile" >> "$GITHUB_OUTPUT"
 
   unit-setup:
-    name: Unit / tofu-setup
+    name: unit / tofu-setup
     needs: 
       - get-tofu-releases
     strategy:
@@ -107,7 +107,7 @@ jobs:
           [[ -d "$TOFU_PLUGIN_CACHE_DIR" ]]
 
   unit-setup-version-file:
-    name: Unit / tofu-setup with tofu-version-file
+    name: unit / tofu-setup with tofu-version-file
     needs:
       - get-tofu-releases
     runs-on: ubuntu-slim
