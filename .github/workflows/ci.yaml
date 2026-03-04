@@ -102,6 +102,30 @@ jobs:
     with:
       tofu-versions: ${{ needs.get-tofu-releases.outputs.releases }}
 
+  unit-test:
+    name: unit - tofu-test
+    runs-on: ubuntu-slim
+    needs:
+      - get-tofu-releases
+    strategy:
+      matrix:
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
+        chroot-directory:
+          - tst/module-with-tests
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./src/tofu-setup
+        with:
+          tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Run tofu test
+        uses: ./src/tofu-test
+        with:
+          chroot-directory: ${{ matrix.chroot-directory }}
+
   unit-plan:
     name: unit - tofu-plan
     needs: 
