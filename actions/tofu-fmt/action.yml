@@ -4,7 +4,7 @@ description: Format files using tofu
 author: Kamil Zabielski
 
 branding:
-  icon: git-merge
+  icon: align-left
   color: gray-dark
 
 inputs:
