@@ -15,10 +15,25 @@ inputs:
   lock-id:
     description: The lock ID to unlock
     required: true
+  workspace:
+    description: |
+      The name of the tofu workspace to select or create before running tofu force-unlock.
+      If not provided, the current workspace is used.
+    required: false
+    default: ""
 
 runs:
   using: "composite"
   steps:
+    - name: Select or create tofu workspace
+      if: ${{ inputs.workspace != '' }}
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        echo "::group::Select or create tofu workspace"
+        tofu workspace select "${{ inputs.workspace }}" || tofu workspace new "${{ inputs.workspace }}"
+        echo "::endgroup::"
+
     - name: Run tofu force-unlock
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash

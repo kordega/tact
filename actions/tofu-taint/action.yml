@@ -15,6 +15,12 @@ inputs:
   address:
     description: The address of the resource to taint
     required: true
+  workspace:
+    description: |
+      The name of the tofu workspace to select or create before running tofu taint.
+      If not provided, the current workspace is used.
+    required: false
+    default: ""
   allow-missing:
     description: |
       If specified, the command will succeed even if the resource is missing.
@@ -25,6 +31,15 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Select or create tofu workspace
+      if: ${{ inputs.workspace != '' }}
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        echo "::group::Select or create tofu workspace"
+        tofu workspace select "${{ inputs.workspace }}" || tofu workspace new "${{ inputs.workspace }}"
+        echo "::endgroup::"
+
     - name: Run tofu taint
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash

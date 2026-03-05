@@ -21,6 +21,13 @@ on:
         required: false
         default: "."
         type: string
+      workspace:
+        description: |
+          The name of the tofu workspace to select or create before running tofu commands.
+          If not provided, the current workspace is used.
+        required: false
+        default: ""
+        type: string
     outputs:
       plan-has-changes:
         description: Whether the generated plan contains any changes.
@@ -89,6 +96,7 @@ jobs:
         with:
           chroot-directory: ${{ inputs.chroot-directory }}
           environment: ${{ inputs.environment }}
+          workspace: ${{ inputs.workspace }}
           upload-artifact: 'true'
 
   tofu-apply:
@@ -118,4 +126,5 @@ jobs:
         with:
           chroot-directory: ${{ inputs.chroot-directory }}
           environment: ${{ inputs.environment }}
+          workspace: ${{ inputs.workspace }}
           plan-artifact-name: ${{ needs.tofu-plan.outputs.plan-artifact-name }}

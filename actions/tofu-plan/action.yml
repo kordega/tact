@@ -17,6 +17,12 @@ inputs:
       The name of the tf environment to use when running tofu plan. 
       If not provided, the default environment will be used.
     required: true
+  workspace:
+    description: |
+      The name of the tofu workspace to select or create before running tofu plan.
+      If not provided, the current workspace is used.
+    required: false
+    default: ""
   tofu-refresh:
     description: |
       Whether to refresh the state before running tofu plan. 
@@ -92,6 +98,15 @@ runs:
         tofu init        \
           -input=false   \
           -backend=false
+        echo "::endgroup::"
+
+    - name: Select or create tofu workspace
+      if: ${{ inputs.workspace != '' }}
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        echo "::group::Select or create tofu workspace"
+        tofu workspace select "${{ inputs.workspace }}" || tofu workspace new "${{ inputs.workspace }}"
         echo "::endgroup::"
 
     - name: Create random-id for tofu plan filename and artifact name

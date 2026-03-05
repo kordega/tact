@@ -361,6 +361,48 @@ jobs:
           environment: ${{ matrix.tofu-version }}
           plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
 
+  unit-plan-workspace:
+    name: unit - tofu-plan with workspace
+    runs-on: ubuntu-slim
+    needs:
+      - get-tofu-releases
+    strategy:
+      matrix:
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
+        chroot-directory:
+          - plan-with-changes
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./actions/tofu-setup
+        with:
+          tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Run tofu plan with workspace
+        id: tf-plan
+        uses: ./actions/tofu-plan
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          workspace: my-workspace
+          upload-artifact: 'false'
+
+      - name: Assert tofu workspace was selected
+        working-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+        shell: bash
+        run: |
+          [ "$(tofu workspace show)" = "my-workspace" ]
+
+      - name: Run tofu apply with workspace
+        uses: ./actions/tofu-apply
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          workspace: my-workspace
+          plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
+
   unit-taint:
     name: unit - tofu-taint
     runs-on: ubuntu-slim

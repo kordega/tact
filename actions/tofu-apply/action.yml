@@ -15,6 +15,12 @@ inputs:
   environment:
     description: The name of the tofu environment to use when running tofu apply.
     required: false
+  workspace:
+    description: |
+      The name of the tofu workspace to select or create before running tofu apply.
+      If not provided, the current workspace is used.
+    required: false
+    default: ""
   plan-file-path:
     description: The path to the tofu plan file to apply when not using an artifact. One of plan-file-path or plan-artifact-name must be provided.
     required: false
@@ -67,6 +73,15 @@ runs:
         tofu init        \
           -input=false   \
           -backend=false
+        echo "::endgroup::"
+
+    - name: Select or create tofu workspace
+      if: ${{ inputs.workspace != '' }}
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      run: |
+        echo "::group::Select or create tofu workspace"
+        tofu workspace select "${{ inputs.workspace }}" || tofu workspace new "${{ inputs.workspace }}"
         echo "::endgroup::"
 
     - name: Run tofu apply
