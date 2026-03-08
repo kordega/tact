@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   tofu-setup:
-    name: unit / tofu-setup
+    name: unit - tofu-setup
     runs-on: ubuntu-slim
     strategy:
       fail-fast: true

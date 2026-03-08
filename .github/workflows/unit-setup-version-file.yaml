@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   tofu-setup-version-file:
-    name: unit / tofu-setup with tofu-version-file
+    name: unit - tofu-setup with tofu-version-file
     runs-on: ubuntu-slim
     steps:
       - name: Checkout the repository
