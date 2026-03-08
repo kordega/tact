@@ -1,0 +1,95 @@
+name: Unit - tofu-unlock
+
+on:
+  workflow_call:
+    inputs:
+      tofu-versions:
+        description: JSON array of OpenTofu versions to test.
+        required: true
+        type: string
+      test-fixtures-dir:
+        description: Directory containing the test fixtures.
+        required: false
+        default: test-fixtures
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  tofu-unlock:
+    name: unit - tofu-unlock
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tofu-version: ${{ fromJson(inputs.tofu-versions) }}
+        chroot-directory:
+          - unlock-state
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./actions/tofu-setup
+        with:
+          tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Start MinIO
+        shell: bash
+        run: |
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio server /data
+          for _ in $(seq 1 30); do
+            curl -sf http://127.0.0.1:9000/minio/health/live && break
+            sleep 1
+          done
+
+      - name: Create S3 bucket
+        env:
+          AWS_ACCESS_KEY_ID: minioadmin
+          AWS_SECRET_ACCESS_KEY: minioadmin
+        shell: bash
+        run: |
+          aws s3 mb s3://tofu-state \
+            --endpoint-url http://127.0.0.1:9000 \
+            --region us-east-1
+
+      - name: Run tofu init
+        working-directory: ${{ inputs.test-fixtures-dir }}/${{ matrix.chroot-directory }}
+        shell: bash
+        run: |
+          echo "::group::Run tofu init"
+          tofu init \
+            -input=false
+          echo "::endgroup::"
+
+      - name: Simulate state lock
+        env:
+          AWS_ACCESS_KEY_ID: minioadmin
+          AWS_SECRET_ACCESS_KEY: minioadmin
+        shell: bash
+        run: |
+          echo '{"ID":"test-lock-id","Operation":"OperationTypeApply","Info":"","Who":"test@localhost","Version":"${{ matrix.tofu-version }}","Created":"2024-01-01T00:00:00.000000Z","Path":"tofu-state/terraform.tfstate"}' \
+            | aws s3 cp - s3://tofu-state/terraform.tfstate.tflock \
+                --endpoint-url http://127.0.0.1:9000 \
+                --region us-east-1 \
+                --content-type application/json
+
+      - name: Run tofu unlock-state
+        uses: ./actions/tofu-unlock-state
+        with:
+          chroot-directory: ${{ inputs.test-fixtures-dir }}/${{ matrix.chroot-directory }}
+          lock-id: test-lock-id
+
+      - name: Assert state lock has been removed
+        env:
+          AWS_ACCESS_KEY_ID: minioadmin
+          AWS_SECRET_ACCESS_KEY: minioadmin
+        shell: bash
+        run: |
+          ! aws s3 ls s3://tofu-state/terraform.tfstate.tflock \
+            --endpoint-url http://127.0.0.1:9000 \
+            --region us-east-1

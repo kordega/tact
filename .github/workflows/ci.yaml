@@ -82,116 +82,17 @@ jobs:
     name: unit / tofu-setup with tofu-version-file
     needs:
       - get-tofu-releases
-    runs-on: ubuntu-slim
-    env:
+    uses: ./.github/workflows/unit-setup-version-file.yaml
+    with:
       tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases)[0] }}
-    steps:
-      - name: Checkout the repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Prepare tofu version file
-        shell: bash
-        run: |
-          mkdir -p .cache
-          echo "${{ env.tofu-version }}" > .cache/tofu-version.txt
-
-      - name: Run tofu setup with tofu version file
-        uses: ./actions/tofu-setup
-        id: tofu-setup
-        with:
-          tofu-version-file: .cache/tofu-version.txt
-
-      - name: Assert tofu setup by checking version
-        shell: bash
-        run: |
-          echo "::group::Show tofu version"
-          tofu version
-          echo "::endgroup::"
-
-          echo "::group::Check tofu version"
-          status=0
-          [ "$(tofu version -json | jq -r '.terraform_version')" = "${{ env.tofu-version }}" ] || status=$?
-          echo "::endgroup::"
-          exit "$status"
 
   unit-unlock-state:
     name: unit - tofu-unlock
-    runs-on: ubuntu-latest
     needs:
       - get-tofu-releases
-    strategy:
-      matrix:
-        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases-with-lockfile) }}
-        chroot-directory:
-          - unlock-state
-    steps:
-      - name: Checkout the repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Run tofu setup
-        uses: ./actions/tofu-setup
-        with:
-          tofu-version: ${{ matrix.tofu-version }}
-
-      - name: Start MinIO
-        shell: bash
-        run: |
-          docker run -d --name minio \
-            -p 9000:9000 \
-            -e MINIO_ROOT_USER=minioadmin \
-            -e MINIO_ROOT_PASSWORD=minioadmin \
-            minio/minio server /data
-          for _ in $(seq 1 30); do
-            curl -sf http://127.0.0.1:9000/minio/health/live && break
-            sleep 1
-          done
-
-      - name: Create S3 bucket
-        env:
-          AWS_ACCESS_KEY_ID: minioadmin
-          AWS_SECRET_ACCESS_KEY: minioadmin
-        shell: bash
-        run: |
-          aws s3 mb s3://tofu-state \
-            --endpoint-url http://127.0.0.1:9000 \
-            --region us-east-1
-
-      - name: Run tofu init
-        working-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
-        shell: bash
-        run: |
-          echo "::group::Run tofu init"
-          tofu init \
-            -input=false
-          echo "::endgroup::"
-
-      - name: Simulate state lock
-        env:
-          AWS_ACCESS_KEY_ID: minioadmin
-          AWS_SECRET_ACCESS_KEY: minioadmin
-        shell: bash
-        run: |
-          echo '{"ID":"test-lock-id","Operation":"OperationTypeApply","Info":"","Who":"test@localhost","Version":"${{ matrix.tofu-version }}","Created":"2024-01-01T00:00:00.000000Z","Path":"tofu-state/terraform.tfstate"}' \
-            | aws s3 cp - s3://tofu-state/terraform.tfstate.tflock \
-                --endpoint-url http://127.0.0.1:9000 \
-                --region us-east-1 \
-                --content-type application/json
-
-      - name: Run tofu unlock-state
-        uses: ./actions/tofu-unlock-state
-        with:
-          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
-          lock-id: test-lock-id
-
-      - name: Assert state lock has been removed
-        env:
-          AWS_ACCESS_KEY_ID: minioadmin
-          AWS_SECRET_ACCESS_KEY: minioadmin
-        shell: bash
-        run: |
-          ! aws s3 ls s3://tofu-state/terraform.tfstate.tflock \
-            --endpoint-url http://127.0.0.1:9000 \
-            --region us-east-1
+    uses: ./.github/workflows/unit-unlock-state.yaml
+    with:
+      tofu-versions: ${{ needs.get-tofu-releases.outputs.releases-with-lockfile }}
 
   unit-fmt:
     name: unit - tofu-fmt
