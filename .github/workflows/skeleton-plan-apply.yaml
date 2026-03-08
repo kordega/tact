@@ -45,8 +45,8 @@ jobs:
       - name: Checkout tact
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          repository: kortega-com/tact
-          ref: ${{ github.repository == 'kortega-com/tact' && github.ref || 'main' }}
+          repository: kordega/tact
+          ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
           path: .tact
 
       - name: Run tofu setup
@@ -73,8 +73,8 @@ jobs:
       - name: Checkout tact
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          repository: kortega-com/tact
-          ref: ${{ github.repository == 'kortega-com/tact' && github.ref || 'main' }}
+          repository: kordega/tact
+          ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
           path: .tact
 
       - name: Run tofu setup
@@ -103,8 +103,8 @@ jobs:
       - name: Checkout tact
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          repository: kortega-com/tact
-          ref: ${{ github.repository == 'kortega-com/tact' && github.ref || 'main' }}
+          repository: kordega/tact
+          ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
           path: .tact
 
       - name: Run tofu setup
