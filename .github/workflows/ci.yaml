@@ -211,105 +211,19 @@ jobs:
 
   unit-taint:
     name: unit - tofu-taint
-    runs-on: ubuntu-slim
     needs:
       - get-tofu-releases
-    permissions:
-      contents: read
-    strategy:
-      matrix:
-        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
-        chroot-directory:
-          - taint-resource
-    steps:
-      - name: Checkout the repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Run tofu setup
-        uses: ./actions/tofu-setup
-        with:
-          tofu-version: ${{ matrix.tofu-version }}
-
-      - name: Run tofu plan for taint test fixture
-        id: tf-plan
-        uses: ./actions/tofu-plan
-        with:
-          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
-          environment: ${{ matrix.tofu-version }}
-          upload-artifact: 'false'
-
-      - name: Run tofu apply to create state
-        uses: ./actions/tofu-apply
-        with:
-          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
-          plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
-
-      - name: Run tofu taint
-        uses: ./actions/tofu-taint
-        with:
-          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
-          address: time_static.this
-
-      - name: Assert resource is marked for tainting
-        working-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
-        shell: bash
-        run: |
-          tofu state pull | jq -e '
-            .resources[]
-            | select(.type == "time_static" and .name == "this")
-            | .instances[].status == "tainted"
-          '
+    uses: ./.github/workflows/unit-taint.yaml
+    with:
+      tofu-versions: ${{ needs.get-tofu-releases.outputs.releases }}
 
   unit-import:
     name: unit - tofu-import
-    runs-on: ubuntu-slim
     needs:
       - get-tofu-releases
-    permissions:
-      contents: read
-    strategy:
-      matrix:
-        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
-        chroot-directory:
-          - plan-with-import
-    steps:
-      - name: Checkout the repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Run tofu setup
-        uses: ./actions/tofu-setup
-        with:
-          tofu-version: ${{ matrix.tofu-version }}
-
-      - name: Run tofu plan for import test fixture
-        id: tf-plan
-        uses: ./actions/tofu-plan
-        with:
-          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
-          environment: ${{ matrix.tofu-version }}
-          upload-artifact: 'false'
-
-      - name: Assert tofu plan import count
-        shell: bash
-        run: |
-          set -euo pipefail
-          [ "${{ steps.tf-plan.outputs.plan-import-count }}" = "1" ]
-
-      - name: Run tofu apply to import resource
-        uses: ./actions/tofu-apply
-        with:
-          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
-          plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
-
-      - name: Assert resource has been imported into state
-        working-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
-        shell: bash
-        run: |
-          tofu state pull | jq -e '
-            .resources[]
-            | select(.type == "time_static" and .name == "this")
-            | .instances[].attributes.rfc3339 == "2024-01-01T00:00:00Z"
-          '
+    uses: ./.github/workflows/unit-import.yaml
+    with:
+      tofu-versions: ${{ needs.get-tofu-releases.outputs.releases }}
 
   integration-plan:
     name: integration / plan
