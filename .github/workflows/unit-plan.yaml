@@ -1,0 +1,118 @@
+---
+name: Unit - tofu-plan
+
+on:
+  workflow_call:
+    inputs:
+      tofu-versions:
+        description: JSON array of OpenTofu versions to test.
+        required: true
+        type: string
+      test-fixtures-dir:
+        description: Directory containing the test fixtures.
+        required: false
+        default: test-fixtures
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  tofu-plan:
+    name: unit - tofu-plan
+    runs-on: ubuntu-slim
+    strategy:
+      matrix:
+        tofu-version: ${{ fromJson(inputs.tofu-versions) }}
+        chroot-directory:
+          - plan-with-changes
+          - plan-without-changes
+          - plan-with-sops
+        include:
+          - chroot-directory: plan-with-changes
+            plan-has-changes: 'true'
+            plan-add-count: '1'
+            upload-artifact: 'false'
+            tofu-apply: 'true'
+            tofu-destroy: 'true'
+            sops-age-key: ''
+          - chroot-directory: plan-without-changes
+            plan-has-changes: 'false'
+            plan-add-count: '0'
+            upload-artifact: 'false'
+            tofu-apply: 'true'
+            tofu-destroy: 'true'
+            sops-age-key: ''
+          - chroot-directory: plan-with-sops
+            plan-has-changes: 'true'
+            plan-add-count: '1'
+            upload-artifact: 'false'
+            tofu-apply: 'true'
+            tofu-destroy: 'true'
+            sops-age-key: 'AGE-SECRET-KEY-18EDM87RHYPH4DNF8V8D80DQPZLY8M08EYD0AYF42A0HJAN225ZGS6EHY7X'
+    env:
+      SOPS_AGE_KEY: ${{ matrix.sops-age-key }}
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./actions/tofu-setup
+        with:
+          tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Run tofu plan for apply test fixture
+        id: tf-plan
+        uses: ./actions/tofu-plan
+        with:
+          chroot-directory: ${{ inputs.test-fixtures-dir }}/${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          upload-artifact: ${{ matrix.upload-artifact }}
+
+      - name: Assert tofu plan change counts
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "${{ steps.tf-plan.outputs.plan-has-changes }}" = "${{ matrix.plan-has-changes }}" ]
+          [ "${{ steps.tf-plan.outputs.plan-add-count }}" = "${{ matrix.plan-add-count }}" ]
+          [ "${{ steps.tf-plan.outputs.plan-change-count }}" = "0" ]
+          [ "${{ steps.tf-plan.outputs.plan-destroy-count }}" = "0" ]
+          [ "${{ steps.tf-plan.outputs.plan-replace-count }}" = "0" ]
+          [ "${{ steps.tf-plan.outputs.plan-import-count }}" = "0" ]
+
+      - name: Run tofu apply without artifact
+        id: tf-apply-no-artifact
+        uses: ./actions/tofu-apply
+        if: matrix.tofu-apply == 'true' && matrix.upload-artifact == 'false'
+        with:
+          chroot-directory: ${{ inputs.test-fixtures-dir }}/${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
+
+      - name: Run tofu apply with artifact
+        id: tf-apply-with-artifact
+        uses: ./actions/tofu-apply
+        if: matrix.tofu-apply == 'true' && matrix.upload-artifact == 'true'
+        with:
+          chroot-directory: ${{ inputs.test-fixtures-dir }}/${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
+
+      - name: Run tofu plan for destroy test fixture
+        id: tf-plan-destroy
+        uses: ./actions/tofu-plan
+        if: matrix.tofu-destroy == 'true'
+        with:
+          chroot-directory: ${{ inputs.test-fixtures-dir }}/${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          tofu-destroy: '${{ matrix.tofu-destroy }}'
+          upload-artifact: '${{ matrix.upload-artifact }}'
+
+      - name: Run tofu apply for destroy test fixture
+        id: tf-apply-destroy
+        uses: ./actions/tofu-apply
+        if: matrix.tofu-destroy == 'true'
+        with:
+          chroot-directory: ${{ inputs.test-fixtures-dir }}/${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}

@@ -1,0 +1,66 @@
+---
+name: Unit - tofu-taint
+
+on:
+  workflow_call:
+    inputs:
+      tofu-versions:
+        description: JSON array of OpenTofu versions to test.
+        required: true
+        type: string
+      test-fixtures-dir:
+        description: Directory containing the test fixtures.
+        required: false
+        default: test-fixtures
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  tofu-taint:
+    name: unit - tofu-taint
+    runs-on: ubuntu-slim
+    strategy:
+      matrix:
+        tofu-version: ${{ fromJson(inputs.tofu-versions) }}
+        chroot-directory:
+          - taint-resource
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./actions/tofu-setup
+        with:
+          tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Run tofu plan for taint test fixture
+        id: tf-plan
+        uses: ./actions/tofu-plan
+        with:
+          chroot-directory: ${{ inputs.test-fixtures-dir }}/${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          upload-artifact: 'false'
+
+      - name: Run tofu apply to create state
+        uses: ./actions/tofu-apply
+        with:
+          chroot-directory: ${{ inputs.test-fixtures-dir }}/${{ matrix.chroot-directory }}
+          plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
+
+      - name: Run tofu taint
+        uses: ./actions/tofu-taint
+        with:
+          chroot-directory: ${{ inputs.test-fixtures-dir }}/${{ matrix.chroot-directory }}
+          address: time_static.this
+
+      - name: Assert resource is marked for tainting
+        working-directory: ${{ inputs.test-fixtures-dir }}/${{ matrix.chroot-directory }}
+        shell: bash
+        run: |
+          tofu state pull | jq -e '
+            .resources[]
+            | select(.type == "time_static" and .name == "this")
+            | .instances[].status == "tainted"
+          '
