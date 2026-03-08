@@ -1,0 +1,51 @@
+---
+name: Unit - tofu-setup
+
+on:
+  workflow_call:
+    inputs:
+      tofu-versions:
+        description: JSON array of OpenTofu versions to test.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  tofu-setup:
+    name: unit / tofu-setup
+    runs-on: ubuntu-slim
+    strategy:
+      fail-fast: true
+      matrix:
+        tofu-version: ${{ fromJson(inputs.tofu-versions) }}
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        id: tofu-setup
+        uses: ./actions/tofu-setup
+        with:
+          tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Assert tofu setup by checking version
+        shell: bash
+        run: |
+          echo "::group::Show tofu version"
+          tofu version
+          echo "::endgroup::"
+
+          echo "::group::Check tofu version"
+          [ "$(tofu version -json | jq -r '.terraform_version')" = "${{ matrix.tofu-version }}" ] && exit 0 || exit 1
+          echo "::endgroup::"
+
+      - name: Assert provider cache path
+        shell: bash
+        run: |
+          [[ "$TOFU_PLUGIN_CACHE_DIR" = "$RUNNER_TEMP"/tofu-provider-cache-*/.opentofu/plugin-cache ]]
+          [[ "$TF_PLUGIN_CACHE_DIR" = "$TOFU_PLUGIN_CACHE_DIR" ]]
+          [[ "$TOFU_PROVIDER_CACHE_DIR" = "$TOFU_PLUGIN_CACHE_DIR" ]]
+          [[ "$TOFU_PLUGIN_CACHE_DIR" != "$HOME/.terraform.d/plugin-cache" ]]
+          [[ -d "$TOFU_PLUGIN_CACHE_DIR" ]]

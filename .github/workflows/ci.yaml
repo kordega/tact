@@ -74,40 +74,9 @@ jobs:
     name: unit / tofu-setup
     needs: 
       - get-tofu-releases
-    strategy:
-      fail-fast: true
-      matrix:
-        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
-    runs-on: ubuntu-slim
-    steps:
-      - name: Checkout the repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Run tofu setup
-        uses: ./actions/tofu-setup
-        id: tofu-setup
-        with:
-          tofu-version: ${{ matrix.tofu-version }}
-
-      - name: Assert tofu setup by checking version
-        shell: bash
-        run: |
-          echo "::group::Show tofu version"
-          tofu version
-          echo "::endgroup::"
-
-          echo "::group::Check tofu version"
-          [ "$(tofu version -json | jq -r '.terraform_version')" = "${{ matrix.tofu-version }}" ] && exit 0 || exit 1
-          echo "::endgroup::"
-
-      - name: Assert provider cache path
-        shell: bash
-        run: |
-          [[ "$TOFU_PLUGIN_CACHE_DIR" = "$RUNNER_TEMP"/tofu-provider-cache-*/.opentofu/plugin-cache ]]
-          [[ "$TF_PLUGIN_CACHE_DIR" = "$TOFU_PLUGIN_CACHE_DIR" ]]
-          [[ "$TOFU_PROVIDER_CACHE_DIR" = "$TOFU_PLUGIN_CACHE_DIR" ]]
-          [[ "$TOFU_PLUGIN_CACHE_DIR" != "$HOME/.terraform.d/plugin-cache" ]]
-          [[ -d "$TOFU_PLUGIN_CACHE_DIR" ]]
+    uses: ./.github/workflows/unit-setup.yaml
+    with:
+      tofu-versions: ${{ needs.get-tofu-releases.outputs.releases }}
 
   unit-setup-version-file:
     name: unit / tofu-setup with tofu-version-file
