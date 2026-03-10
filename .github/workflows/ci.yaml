@@ -238,6 +238,6 @@ jobs:
     uses: ./.github/workflows/skeleton-plan-apply.yaml
     secrets: inherit
     with:
-      tofu-version-file: test-fixtures/tofu-version
+      tofu-version-file: test-fixtures/tofu-version/.tofu-version
       chroot-directory: test-fixtures/${{ matrix.chroot-directory }}
       environment: integration
