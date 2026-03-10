@@ -138,8 +138,15 @@ runs:
         if [[ -n "${{ inputs.checksum }}" ]]; then
           expected="${{ inputs.checksum }}"
         elif [[ -n "${{ inputs.checksum-file }}" ]]; then
+          algo="${{ inputs.algorithm }}"
+          case "$algo" in
+            md5)    hex_len=32  ;;
+            sha1)   hex_len=40  ;;
+            sha256) hex_len=64  ;;
+            sha512) hex_len=128 ;;
+          esac
           target_name="$(basename "${{ inputs.file }}")"
-          expected="$(grep -E "(^[0-9a-fA-F]+[[:space:]]+\*?${target_name}$|${target_name}[[:space:]]*=[[:space:]]*[0-9a-fA-F]+$)" "${{ inputs.checksum-file }}" | head -1 | grep -oE '[0-9a-fA-F]{32,}')"
+          expected="$(grep -E "(^[0-9a-fA-F]+[[:space:]]+\*?${target_name}$|${target_name}[[:space:]]*=[[:space:]]*[0-9a-fA-F]+$)" "${{ inputs.checksum-file }}" | head -1 | grep -oE "[0-9a-fA-F]{${hex_len}}")"
           if [[ -z "$expected" ]]; then
             echo "::error::No checksum entry found for $target_name in ${{ inputs.checksum-file }}"
             exit 1
