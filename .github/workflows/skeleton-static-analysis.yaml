@@ -1,0 +1,47 @@
+---
+name: Skeleton - Static Analysis
+
+on:
+  workflow_call:
+    inputs:
+      tofu-version:
+        description: Version of opentofu to install.
+        required: false
+        type: string
+      tofu-version-file:
+        description: Path to a file containing the OpenTofu version to install.
+        required: false
+        type: string
+      chroot-directory:
+        description: Directory to chroot into before running tofu commands.
+        required: false
+        default: "."
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  tofu-fmt:
+    runs-on: ubuntu-slim
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Checkout tact
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          repository: kordega/tact
+          ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
+          path: .tact
+
+      - name: Run tofu setup
+        uses: ./.tact/actions/tofu-setup
+        with:
+          tofu-version: ${{ inputs.tofu-version }}
+          tofu-version-file: ${{ inputs.tofu-version-file }}
+
+      - name: Run tofu fmt
+        uses: ./.tact/actions/tofu-fmt
+        with:
+          chroot-directory: ${{ inputs.chroot-directory }}

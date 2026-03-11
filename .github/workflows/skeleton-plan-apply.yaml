@@ -41,30 +41,6 @@ permissions:
   contents: read
 
 jobs:
-  tofu-fmt:
-    runs-on: ubuntu-slim
-    steps:
-      - name: Checkout the repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Checkout tact
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          repository: kordega/tact
-          ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
-          path: .tact
-
-      - name: Run tofu setup
-        uses: ./.tact/actions/tofu-setup
-        with:
-          tofu-version: ${{ inputs.tofu-version }}
-          tofu-version-file: ${{ inputs.tofu-version-file }}
-
-      - name: Run tofu fmt
-        uses: ./.tact/actions/tofu-fmt
-        with:
-          chroot-directory: ${{ inputs.chroot-directory }}
-
   tofu-plan:
     runs-on: ubuntu-slim
     outputs:
