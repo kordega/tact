@@ -259,3 +259,35 @@ jobs:
       tofu-version-file: test-fixtures/tofu-version/.tofu-version
       chroot-directory: test-fixtures/${{ matrix.chroot-directory }}
       environment: integration
+
+  integration-skeleton-static-analysis:
+    name: integration / skeleton static-analysis (${{ matrix.chroot-directory }})
+    needs:
+      - integration-plan
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - chroot-directory: plan-with-changes
+          - chroot-directory: plan-without-changes
+    uses: ./.github/workflows/skeleton-static-analysis.yaml
+    secrets: inherit
+    with:
+      tofu-version: ${{ needs.integration-plan.outputs.tofu-version }}
+      chroot-directory: test-fixtures/${{ matrix.chroot-directory }}
+
+  integration-skeleton-static-analysis-version-file:
+    name: integration / skeleton static-analysis version file
+    needs:
+      - integration-plan
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - chroot-directory: plan-with-changes
+          - chroot-directory: plan-without-changes
+    uses: ./.github/workflows/skeleton-static-analysis.yaml
+    secrets: inherit
+    with:
+      tofu-version-file: test-fixtures/tofu-version/.tofu-version
+      chroot-directory: test-fixtures/${{ matrix.chroot-directory }}
