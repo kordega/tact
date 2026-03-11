@@ -26,9 +26,9 @@ inputs:
   tofu-init-backend:
     description: |
       Whether to initialize the backend during tofu init.
-      Accepts true/false. Defaults to false.
+      Accepts true/false. Defaults to true.
     required: false
-    default: "false"
+    default: "true"
 
 runs:
   using: "composite"
