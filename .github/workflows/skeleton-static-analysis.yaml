@@ -1,5 +1,5 @@
 ---
-name: Skeleton - Static Analysis
+name: Skeleton - tact tests
 
 on:
   workflow_call:
@@ -9,7 +9,7 @@ on:
         required: false
         type: string
       tofu-version-file:
-        description: Path to a file containing the OpenTofu version to install.
+        description: Path to a file containing the opentofu version to install.
         required: false
         type: string
       chroot-directory:
