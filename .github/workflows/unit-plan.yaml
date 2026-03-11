@@ -116,3 +116,63 @@ jobs:
           chroot-directory: ${{ inputs.test-fixtures-dir }}/${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
           plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
+
+  tofu-plan-init-backend:
+    name: unit - tofu-plan - init-backend
+    runs-on: ubuntu-slim
+    strategy:
+      matrix:
+        tofu-version: ${{ fromJson(inputs.tofu-versions) }}
+        tofu-init-backend:
+          - 'true'
+          - 'false'
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./actions/tofu-setup
+        with:
+          tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Run tofu plan with tofu-init-backend=${{ matrix.tofu-init-backend }}
+        id: tf-plan
+        uses: ./actions/tofu-plan
+        with:
+          chroot-directory: ${{ inputs.test-fixtures-dir }}/plan-with-changes
+          environment: ${{ matrix.tofu-version }}
+          tofu-init-backend: '${{ matrix.tofu-init-backend }}'
+          upload-artifact: 'false'
+
+      - name: Assert tofu plan change counts
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "${{ steps.tf-plan.outputs.plan-has-changes }}" = "true" ]
+          [ "${{ steps.tf-plan.outputs.plan-add-count }}" = "1" ]
+
+      - name: Run tofu apply with tofu-init-backend=${{ matrix.tofu-init-backend }}
+        uses: ./actions/tofu-apply
+        with:
+          chroot-directory: ${{ inputs.test-fixtures-dir }}/plan-with-changes
+          environment: ${{ matrix.tofu-version }}
+          tofu-init-backend: '${{ matrix.tofu-init-backend }}'
+          plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
+
+      - name: Run tofu plan for destroy
+        id: tf-plan-destroy
+        uses: ./actions/tofu-plan
+        with:
+          chroot-directory: ${{ inputs.test-fixtures-dir }}/plan-with-changes
+          environment: ${{ matrix.tofu-version }}
+          tofu-init-backend: '${{ matrix.tofu-init-backend }}'
+          tofu-destroy: 'true'
+          upload-artifact: 'false'
+
+      - name: Run tofu apply for destroy
+        uses: ./actions/tofu-apply
+        with:
+          chroot-directory: ${{ inputs.test-fixtures-dir }}/plan-with-changes
+          environment: ${{ matrix.tofu-version }}
+          tofu-init-backend: '${{ matrix.tofu-init-backend }}'
+          plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
