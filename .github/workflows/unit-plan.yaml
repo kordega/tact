@@ -118,7 +118,7 @@ jobs:
           plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
 
   tofu-plan-init-backend:
-    name: unit - tofu-plan / init-backend
+    name: unit - tofu-plan - init-backend
     runs-on: ubuntu-slim
     strategy:
       matrix:
