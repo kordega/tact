@@ -138,7 +138,7 @@ runs:
         echo "::endgroup::"
 
         echo "::group::Verify archive checksum"
-        expected="$(grep "  ${archive}\$" "${verify_dir}/SHA256SUMS" | awk '{print $1}')"
+        expected="$(grep -E "^[0-9a-f]+[[:space:]]+${archive}$" "${verify_dir}/SHA256SUMS" | awk '{print $1}')"
         actual="$(sha256sum "${verify_dir}/${archive}" | awk '{print $1}')"
         if [[ -z "$expected" ]]; then
           echo "::error::No checksum entry for ${archive} in SHA256SUMS"
@@ -153,10 +153,18 @@ runs:
 
         echo "::group::Verify installed binary matches archive"
         unzip -q -o "${verify_dir}/${archive}" tofu -d "${verify_dir}/extracted"
+        if [[ ! -f "${verify_dir}/extracted/tofu" ]]; then
+          echo "::error::Failed to extract tofu binary from archive"
+          exit 1
+        fi
         ref_checksum="$(sha256sum "${verify_dir}/extracted/tofu" | awk '{print $1}')"
         installed_tofu="$(find "${RUNNER_TOOL_CACHE:-/opt/hostedtoolcache}/tofu" \
           -name tofu -type f ! -path "*/wrapper/*" -executable 2>/dev/null | head -1)"
         : "${installed_tofu:=$(command -v tofu)}"
+        if [[ -z "$installed_tofu" ]]; then
+          echo "::error::Could not locate installed tofu binary"
+          exit 1
+        fi
         bin_checksum="$(sha256sum "$installed_tofu" | awk '{print $1}')"
         if [[ "$ref_checksum" != "$bin_checksum" ]]; then
           echo "::error::Installed binary does not match verified archive. Expected: ${ref_checksum}, Got: ${bin_checksum}"
