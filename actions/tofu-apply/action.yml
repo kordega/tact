@@ -23,6 +23,12 @@ inputs:
     description: The name of the GitHub Actions artifact containing the tofu plan file to apply. Takes precedence over plan-file-path if both are provided. One of plan-file-path or plan-artifact-name must be provided.
     required: false
     default: ""
+  tofu-init-backend:
+    description: |
+      Whether to initialize the backend during tofu init.
+      Accepts true/false. Defaults to false.
+    required: false
+    default: "false"
 
 runs:
   using: "composite"
@@ -66,7 +72,7 @@ runs:
         echo "::group::Run tofu init"
         tofu init        \
           -input=false   \
-          -backend=false
+          -backend=${{ inputs.tofu-init-backend }}
         echo "::endgroup::"
 
     - name: Run tofu apply

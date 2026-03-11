@@ -41,6 +41,12 @@ inputs:
       Defaults to true.
     required: false
     default: "true"
+  tofu-init-backend:
+    description: |
+      Whether to initialize the backend during tofu init.
+      Accepts true/false. Defaults to false.
+    required: false
+    default: "false"
   send-to-step-summary:
     description: |
       Whether to send the rendered plan output to the GitHub Step Summary.
@@ -91,7 +97,7 @@ runs:
         echo "::group::Run tofu init"
         tofu init        \
           -input=false   \
-          -backend=false
+          -backend=${{ inputs.tofu-init-backend }}
         echo "::endgroup::"
 
     - name: Create random-id for tofu plan filename and artifact name
