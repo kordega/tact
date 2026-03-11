@@ -58,10 +58,10 @@ inputs:
 outputs:
   tofu-checksum:
     description: SHA256 checksum of the installed OpenTofu binary.
-    value: ${{ steps.verify-checksum.outputs.tofu-checksum }}
+    value: ${{ steps.verify-binary.outputs.tofu-checksum }}
   checksum-verified:
     description: Whether the installed binary's checksum was verified against the official release (true/false).
-    value: ${{ steps.verify-checksum.outputs.checksum-verified }}
+    value: ${{ steps.verify-binary.outputs.checksum-verified }}
 
 runs:
   using: "composite"
@@ -99,9 +99,9 @@ runs:
         tofu_wrapper: ${{ inputs.tofu-wrapper }}
         cache: ${{ inputs.cache }}
 
-    - name: Verify tofu binary checksum
+    - name: Resolve platform and version
       if: ${{ inputs.verify-checksum == 'true' }}
-      id: verify-checksum
+      id: resolve-platform
       shell: bash
       run: |
         set -euo pipefail
@@ -116,48 +116,77 @@ runs:
         esac
 
         verify_dir="$(mktemp -d)"
-        trap 'rm -rf "$verify_dir"' EXIT
-
-        release_url="https://github.com/opentofu/opentofu/releases/download/v${version}"
         archive="tofu_${version}_${os}_${arch}.zip"
 
-        echo "::group::Download verification artifacts for tofu v${version}"
-        curl -fsSL -o "${verify_dir}/SHA256SUMS"        "${release_url}/tofu_${version}_SHA256SUMS"
-        curl -fsSL -o "${verify_dir}/SHA256SUMS.gpgsig" "${release_url}/tofu_${version}_SHA256SUMS.gpgsig"
-        curl -fsSL -o "${verify_dir}/${archive}"        "${release_url}/${archive}"
-        echo "::endgroup::"
+        echo "version=${version}"   >> "$GITHUB_OUTPUT"
+        echo "verify-dir=${verify_dir}" >> "$GITHUB_OUTPUT"
+        echo "archive=${archive}"   >> "$GITHUB_OUTPUT"
+        echo "release-url=https://github.com/opentofu/opentofu/releases/download/v${version}" >> "$GITHUB_OUTPUT"
 
-        echo "::group::Verify GPG signature on SHA256SUMS"
-        gpg_home="${verify_dir}/.gnupg"
+    - name: Download verification artifacts
+      if: ${{ inputs.verify-checksum == 'true' }}
+      shell: bash
+      env:
+        VERIFY_DIR: ${{ steps.resolve-platform.outputs.verify-dir }}
+        RELEASE_URL: ${{ steps.resolve-platform.outputs.release-url }}
+        VERSION: ${{ steps.resolve-platform.outputs.version }}
+        ARCHIVE: ${{ steps.resolve-platform.outputs.archive }}
+      run: |
+        set -euo pipefail
+        curl -fsSL -o "${VERIFY_DIR}/SHA256SUMS"        "${RELEASE_URL}/tofu_${VERSION}_SHA256SUMS"
+        curl -fsSL -o "${VERIFY_DIR}/SHA256SUMS.gpgsig" "${RELEASE_URL}/tofu_${VERSION}_SHA256SUMS.gpgsig"
+        curl -fsSL -o "${VERIFY_DIR}/${ARCHIVE}"        "${RELEASE_URL}/${ARCHIVE}"
+
+    - name: Verify GPG signature
+      if: ${{ inputs.verify-checksum == 'true' }}
+      shell: bash
+      env:
+        VERIFY_DIR: ${{ steps.resolve-platform.outputs.verify-dir }}
+      run: |
+        set -euo pipefail
+        gpg_home="${VERIFY_DIR}/.gnupg"
         mkdir -m 700 -p "$gpg_home"
         curl -fsSL https://get.opentofu.org/opentofu.gpg \
           | gpg --homedir "$gpg_home" --batch --import 2>&1
         gpg --homedir "$gpg_home" --batch --verify \
-          "${verify_dir}/SHA256SUMS.gpgsig" \
-          "${verify_dir}/SHA256SUMS" 2>&1
-        echo "::endgroup::"
+          "${VERIFY_DIR}/SHA256SUMS.gpgsig" \
+          "${VERIFY_DIR}/SHA256SUMS" 2>&1
 
-        echo "::group::Verify archive checksum"
-        expected="$(grep -E "^[0-9a-f]+[[:space:]]+${archive}$" "${verify_dir}/SHA256SUMS" | awk '{print $1}')"
-        actual="$(sha256sum "${verify_dir}/${archive}" | awk '{print $1}')"
+    - name: Verify archive checksum
+      if: ${{ inputs.verify-checksum == 'true' }}
+      shell: bash
+      env:
+        VERIFY_DIR: ${{ steps.resolve-platform.outputs.verify-dir }}
+        ARCHIVE: ${{ steps.resolve-platform.outputs.archive }}
+      run: |
+        set -euo pipefail
+        expected="$(grep -E "^[0-9a-f]+[[:space:]]+${ARCHIVE}$" "${VERIFY_DIR}/SHA256SUMS" | awk '{print $1}')"
+        actual="$(sha256sum "${VERIFY_DIR}/${ARCHIVE}" | awk '{print $1}')"
         if [[ -z "$expected" ]]; then
-          echo "::error::No checksum entry for ${archive} in SHA256SUMS"
+          echo "::error::No checksum entry for ${ARCHIVE} in SHA256SUMS"
           exit 1
         fi
         if [[ "$expected" != "$actual" ]]; then
-          echo "::error::Archive checksum mismatch for ${archive}. Expected: ${expected}, Got: ${actual}"
+          echo "::error::Archive checksum mismatch for ${ARCHIVE}. Expected: ${expected}, Got: ${actual}"
           exit 1
         fi
         echo "Archive checksum OK: ${actual}"
-        echo "::endgroup::"
 
-        echo "::group::Verify installed binary matches archive"
-        unzip -q -o "${verify_dir}/${archive}" tofu -d "${verify_dir}/extracted"
-        if [[ ! -f "${verify_dir}/extracted/tofu" ]]; then
+    - name: Verify installed binary
+      if: ${{ inputs.verify-checksum == 'true' }}
+      id: verify-binary
+      shell: bash
+      env:
+        VERIFY_DIR: ${{ steps.resolve-platform.outputs.verify-dir }}
+        ARCHIVE: ${{ steps.resolve-platform.outputs.archive }}
+      run: |
+        set -euo pipefail
+        unzip -q -o "${VERIFY_DIR}/${ARCHIVE}" tofu -d "${VERIFY_DIR}/extracted"
+        if [[ ! -f "${VERIFY_DIR}/extracted/tofu" ]]; then
           echo "::error::Failed to extract tofu binary from archive"
           exit 1
         fi
-        ref_checksum="$(sha256sum "${verify_dir}/extracted/tofu" | awk '{print $1}')"
+        ref_checksum="$(sha256sum "${VERIFY_DIR}/extracted/tofu" | awk '{print $1}')"
         installed_tofu="$(find "${RUNNER_TOOL_CACHE:-/opt/hostedtoolcache}/tofu" \
           -name tofu -type f ! -path "*/wrapper/*" -executable 2>/dev/null | head -1)"
         : "${installed_tofu:=$(command -v tofu)}"
@@ -171,7 +200,14 @@ runs:
           exit 1
         fi
         echo "Binary checksum OK: ${bin_checksum}"
-        echo "::endgroup::"
 
         echo "tofu-checksum=${bin_checksum}" >> "$GITHUB_OUTPUT"
         echo "checksum-verified=true" >> "$GITHUB_OUTPUT"
+
+    - name: Cleanup verification artifacts
+      if: ${{ always() && inputs.verify-checksum == 'true' && steps.resolve-platform.outputs.verify-dir != '' }}
+      shell: bash
+      env:
+        VERIFY_DIR: ${{ steps.resolve-platform.outputs.verify-dir }}
+      run: |
+        rm -rf "$VERIFY_DIR"
