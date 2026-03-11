@@ -83,6 +83,13 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Validate tofu-init-backend input
+      if: ${{ inputs.tofu-init-backend != 'true' && inputs.tofu-init-backend != 'false' }}
+      shell: bash
+      run: |
+        echo "::error::tofu-init-backend must be 'true' or 'false', got '${{ inputs.tofu-init-backend }}'"
+        exit 1
+
     - name: Show tofu version
       shell: bash
       run: |
