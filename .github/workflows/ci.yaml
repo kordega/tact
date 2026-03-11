@@ -126,10 +126,6 @@ jobs:
     with:
       tofu-versions: ${{ needs.get-tofu-releases.outputs.releases }}
 
-  unit-binary-checksum:
-    name: unit - binary-checksum
-    uses: ./.github/workflows/unit-binary-checksum.yaml
-
   integration-plan:
     name: integration / plan
     runs-on: ubuntu-slim

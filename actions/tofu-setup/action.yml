@@ -48,6 +48,20 @@ inputs:
       Override the GitHub token read from the environment variable. 
       Defaults to the value of the GITHUB_TOKEN environment variable unless running on Forgejo or Gitea.
     required: false
+  verify-checksum:
+    description: |
+      Whether to verify the checksum and GPG signature of the installed OpenTofu binary against the official release artifacts.
+      Defaults to true.
+    required: false
+    default: "true"
+
+outputs:
+  tofu-checksum:
+    description: SHA256 checksum of the installed OpenTofu binary.
+    value: ${{ steps.verify-checksum.outputs.tofu-checksum }}
+  checksum-verified:
+    description: Whether the installed binary's checksum was verified against the official release (true/false).
+    value: ${{ steps.verify-checksum.outputs.checksum-verified }}
 
 runs:
   using: "composite"
@@ -84,3 +98,72 @@ runs:
         tofu_version_file: ${{ inputs.tofu-version-file }}
         tofu_wrapper: ${{ inputs.tofu-wrapper }}
         cache: ${{ inputs.cache }}
+
+    - name: Verify tofu binary checksum
+      if: ${{ inputs.verify-checksum == 'true' }}
+      id: verify-checksum
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        version="$(tofu version -json | jq -r '.terraform_version')"
+        os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+        case "$(uname -m)" in
+          x86_64)  arch="amd64" ;;
+          aarch64) arch="arm64" ;;
+          armv7l)  arch="arm"   ;;
+          *)       arch="$(uname -m)" ;;
+        esac
+
+        verify_dir="$(mktemp -d)"
+        trap 'rm -rf "$verify_dir"' EXIT
+
+        release_url="https://github.com/opentofu/opentofu/releases/download/v${version}"
+        archive="tofu_${version}_${os}_${arch}.zip"
+
+        echo "::group::Download verification artifacts for tofu v${version}"
+        curl -fsSL -o "${verify_dir}/SHA256SUMS"        "${release_url}/tofu_${version}_SHA256SUMS"
+        curl -fsSL -o "${verify_dir}/SHA256SUMS.gpgsig" "${release_url}/tofu_${version}_SHA256SUMS.gpgsig"
+        curl -fsSL -o "${verify_dir}/${archive}"        "${release_url}/${archive}"
+        echo "::endgroup::"
+
+        echo "::group::Verify GPG signature on SHA256SUMS"
+        gpg_home="${verify_dir}/.gnupg"
+        mkdir -m 700 -p "$gpg_home"
+        curl -fsSL https://get.opentofu.org/opentofu.gpg \
+          | gpg --homedir "$gpg_home" --batch --import 2>&1
+        gpg --homedir "$gpg_home" --batch --verify \
+          "${verify_dir}/SHA256SUMS.gpgsig" \
+          "${verify_dir}/SHA256SUMS" 2>&1
+        echo "::endgroup::"
+
+        echo "::group::Verify archive checksum"
+        expected="$(grep "  ${archive}\$" "${verify_dir}/SHA256SUMS" | awk '{print $1}')"
+        actual="$(sha256sum "${verify_dir}/${archive}" | awk '{print $1}')"
+        if [[ -z "$expected" ]]; then
+          echo "::error::No checksum entry for ${archive} in SHA256SUMS"
+          exit 1
+        fi
+        if [[ "$expected" != "$actual" ]]; then
+          echo "::error::Archive checksum mismatch for ${archive}. Expected: ${expected}, Got: ${actual}"
+          exit 1
+        fi
+        echo "Archive checksum OK: ${actual}"
+        echo "::endgroup::"
+
+        echo "::group::Verify installed binary matches archive"
+        unzip -q -o "${verify_dir}/${archive}" tofu -d "${verify_dir}/extracted"
+        ref_checksum="$(sha256sum "${verify_dir}/extracted/tofu" | awk '{print $1}')"
+        installed_tofu="$(find "${RUNNER_TOOL_CACHE:-/opt/hostedtoolcache}/tofu" \
+          -name tofu -type f ! -path "*/wrapper/*" -executable 2>/dev/null | head -1)"
+        : "${installed_tofu:=$(command -v tofu)}"
+        bin_checksum="$(sha256sum "$installed_tofu" | awk '{print $1}')"
+        if [[ "$ref_checksum" != "$bin_checksum" ]]; then
+          echo "::error::Installed binary does not match verified archive. Expected: ${ref_checksum}, Got: ${bin_checksum}"
+          exit 1
+        fi
+        echo "Binary checksum OK: ${bin_checksum}"
+        echo "::endgroup::"
+
+        echo "tofu-checksum=${bin_checksum}" >> "$GITHUB_OUTPUT"
+        echo "checksum-verified=true" >> "$GITHUB_OUTPUT"

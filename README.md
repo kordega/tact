@@ -10,50 +10,24 @@
 
 [1]: https://www.hashicorp.com/en/blog/hashicorp-adopts-business-source-license
 
-### Actions
+### Binary checksum verification
 
-#### `binary-checksum`
+The `tofu-setup` action automatically verifies the integrity of the installed OpenTofu binary on every run. The verification step:
 
-Verify the checksum and optional GPG signature of a binary file. Protects against supply-chain attacks and accidental file corruption.
+1. Downloads the official `SHA256SUMS` file from the OpenTofu GitHub release.
+2. Verifies the GPG signature on the `SHA256SUMS` file using the [OpenTofu public key](https://get.opentofu.org/opentofu.gpg).
+3. Downloads the platform-specific distribution archive and verifies its checksum against `SHA256SUMS`.
+4. Extracts the binary from the verified archive and compares its SHA256 with the installed binary.
 
-##### Inputs
+This protects against supply-chain attacks and accidental file corruption.
 
-| Name | Required | Default | Description |
-|------|----------|---------|-------------|
-| `file` | yes | | Path to the binary file to verify. |
-| `algorithm` | no | `sha256` | Hash algorithm (`sha256`, `sha512`, `sha1`, `md5`). |
-| `checksum` | no | | Expected checksum value. Mutually exclusive with `checksum-file`. |
-| `checksum-file` | no | | Path to a checksum file (e.g. `SHA256SUMS`). Mutually exclusive with `checksum`. |
-| `signature-file` | no | | Path to a GPG detached signature file (`.sig`/`.asc`). Requires a public key input. |
-| `public-key-file` | no | | Path to a GPG public key file for signature verification. |
-| `public-key-url` | no | | URL to download the GPG public key for signature verification. |
-
-##### Outputs
-
-| Name | Description |
-|------|-------------|
-| `checksum` | Computed checksum of the file. |
-| `checksum-verified` | `true` if checksum matched the expected value, `false` on mismatch. Empty when no expected checksum was provided. |
-| `signature-verified` | `true` if the GPG signature was verified, `false` on failure. Empty when no signature file was provided. |
-
-##### Usage
-
-Verify a downloaded binary against an expected SHA256 checksum:
+Verification is enabled by default and can be disabled by setting `verify-checksum: 'false'`:
 
 ```yaml
-- uses: kordega/tact/actions/binary-checksum@main
+- uses: kordega/tact/actions/tofu-setup@main
   with:
-    file: my-binary
-    checksum: "abc123..."
+    tofu-version: 1.9.1
+    verify-checksum: 'false'
 ```
 
-Verify using a checksum file and GPG signature:
-
-```yaml
-- uses: kordega/tact/actions/binary-checksum@main
-  with:
-    file: my-binary
-    checksum-file: SHA256SUMS
-    signature-file: my-binary.sig
-    public-key-file: release-key.pub
-```
+The action outputs `tofu-checksum` (the SHA256 of the installed binary) and `checksum-verified` (`true` when verification passes).

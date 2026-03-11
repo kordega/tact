@@ -49,3 +49,9 @@ jobs:
           [[ "$TOFU_PROVIDER_CACHE_DIR" = "$TOFU_PLUGIN_CACHE_DIR" ]]
           [[ "$TOFU_PLUGIN_CACHE_DIR" != "$HOME/.terraform.d/plugin-cache" ]]
           [[ -d "$TOFU_PLUGIN_CACHE_DIR" ]]
+
+      - name: Assert checksum verification passed
+        shell: bash
+        run: |
+          [[ "${{ steps.tofu-setup.outputs.checksum-verified }}" == "true" ]]
+          [[ -n "${{ steps.tofu-setup.outputs.tofu-checksum }}" ]]
