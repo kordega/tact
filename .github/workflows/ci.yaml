@@ -225,6 +225,24 @@ jobs:
       chroot-directory: test-fixtures/${{ matrix.chroot-directory }}
       environment: integration
 
+  integration-skeleton-apply-disabled:
+    name: integration / skeleton apply disabled (${{ matrix.chroot-directory }})
+    needs:
+      - integration-plan
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - chroot-directory: plan-with-changes
+          - chroot-directory: plan-without-changes
+    uses: ./.github/workflows/skeleton-plan-apply.yaml
+    secrets: inherit
+    with:
+      tofu-version: ${{ needs.integration-plan.outputs.tofu-version }}
+      chroot-directory: test-fixtures/${{ matrix.chroot-directory }}
+      environment: integration
+      tofu-apply: false
+
   integration-skeleton-version-file:
     name: integration / skeleton version file
     needs:
