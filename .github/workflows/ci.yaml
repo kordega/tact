@@ -130,6 +130,10 @@ jobs:
     name: unit - tofu-decode-secrets
     uses: ./.github/workflows/unit-decode-secrets.yaml
 
+  unit-encode-secrets:
+    name: unit - tofu-encode-secrets
+    uses: ./.github/workflows/unit-encode-secrets.yaml
+
   integration-plan:
     name: integration / plan
     runs-on: ubuntu-slim
