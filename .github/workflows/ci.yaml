@@ -126,9 +126,29 @@ jobs:
     with:
       tofu-versions: ${{ needs.get-tofu-releases.outputs.releases }}
 
-  unit-env:
-    name: unit - tofu-env
-    uses: ./.github/workflows/unit-env.yaml
+  unit-decode-secrets:
+    name: unit - tofu-decode-secrets
+    uses: ./.github/workflows/unit-decode-secrets.yaml
+
+  unit-encode-secrets:
+    name: unit - tofu-encode-secrets
+    uses: ./.github/workflows/unit-encode-secrets.yaml
+
+  prepare-encoded-test-secrets:
+    name: setup / prepare encoded test secrets
+    runs-on: ubuntu-slim
+    outputs:
+      encoded-secrets: ${{ steps.encode.outputs.encoded-credentials }}
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Encode test secrets
+        id: encode
+        uses: ./actions/tofu-encode-secrets
+        with:
+          credentials: |
+            INTEGRATION_TEST_SECRET=skeleton-secret-value
 
   integration-plan:
     name: integration / plan
@@ -212,10 +232,97 @@ jobs:
           environment: integration
           plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
 
+  integration-decode-secrets:
+    name: integration / decode-secrets (${{ matrix.name }})
+    runs-on: ubuntu-slim
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: simple
+            secret-value: integration-secret-a
+            secret-name: TEST_TOKEN_A
+          - name: special-characters
+            secret-value: "value-with-special/chars+🔑"
+            secret-name: TEST_TOKEN_B
+          - name: empty-string
+            secret-value: ""
+            secret-name: TEST_TOKEN_EMPTY
+          - name: long-value
+            secret-value: "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            secret-name: TEST_TOKEN_LONG
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Encode test secret
+        id: encode
+        shell: bash
+        env:
+          SECRET_VALUE: ${{ matrix.secret-value }}
+          SECRET_NAME: ${{ matrix.secret-name }}
+        run: |
+          encoded="$(echo -n "$SECRET_VALUE" | base64 -w0 | base64 -w0)"
+          echo "encoded-credentials=${SECRET_NAME}=${encoded}" >> "$GITHUB_OUTPUT"
+
+      - name: Decode secret
+        uses: ./actions/tofu-decode-secrets
+        with:
+          encoded-secrets: ${{ steps.encode.outputs.encoded-credentials }}
+
+      - name: Assert decoded value
+        shell: bash
+        env:
+          SECRET_NAME: ${{ matrix.secret-name }}
+          EXPECTED_VALUE: ${{ matrix.secret-value }}
+        run: |
+          set -euo pipefail
+          actual="${!SECRET_NAME}"
+          if [[ "$actual" != "$EXPECTED_VALUE" ]]; then
+            echo "::error::Expected ${SECRET_NAME}='${EXPECTED_VALUE}' but got '${actual}'"
+            exit 1
+          fi
+          echo "OK: ${SECRET_NAME} decoded correctly"
+
+  integration-decode-secrets-multi:
+    name: integration / decode-secrets (multiple)
+    runs-on: ubuntu-slim
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Encode multiple secrets
+        id: encode
+        shell: bash
+        run: |
+          token_a="$(echo -n 'multi-secret-a' | base64 -w0 | base64 -w0)"
+          token_b="$(echo -n 'multi-secret-b' | base64 -w0 | base64 -w0)"
+          {
+            echo 'encoded-credentials<<EOF'
+            echo "MULTI_A=${token_a}"
+            echo "MULTI_B=${token_b}"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Decode secrets
+        uses: ./actions/tofu-decode-secrets
+        with:
+          encoded-secrets: ${{ steps.encode.outputs.encoded-credentials }}
+
+      - name: Assert both decoded
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$MULTI_A" == "multi-secret-a" ]] || { echo "::error::MULTI_A mismatch: got '$MULTI_A'"; exit 1; }
+          [[ "$MULTI_B" == "multi-secret-b" ]] || { echo "::error::MULTI_B mismatch: got '$MULTI_B'"; exit 1; }
+          echo "OK: all secrets decoded correctly"
+
   integration-skeleton:
     name: integration / skeleton (${{ matrix.chroot-directory }})
     needs:
       - integration-plan
+      - integration-decode-secrets
+      - integration-decode-secrets-multi
     strategy:
       fail-fast: true
       matrix:
@@ -233,6 +340,8 @@ jobs:
     name: integration / skeleton apply disabled (${{ matrix.chroot-directory }})
     needs:
       - integration-plan
+      - integration-decode-secrets
+      - integration-decode-secrets-multi
     strategy:
       fail-fast: true
       matrix:
@@ -251,6 +360,8 @@ jobs:
     name: integration / skeleton version file
     needs:
       - integration-plan
+      - integration-decode-secrets
+      - integration-decode-secrets-multi
     strategy:
       fail-fast: true
       matrix:
@@ -263,6 +374,26 @@ jobs:
       tofu-version-file: test-fixtures/tofu-version/.tofu-version
       chroot-directory: test-fixtures/${{ matrix.chroot-directory }}
       environment: integration
+
+  integration-skeleton-with-secrets:
+    name: integration / skeleton with secrets (${{ matrix.chroot-directory }})
+    needs:
+      - integration-plan
+      - prepare-encoded-test-secrets
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - chroot-directory: plan-with-changes
+          - chroot-directory: plan-without-changes
+    uses: ./.github/workflows/skeleton-plan-apply.yaml
+    secrets: inherit
+    with:
+      tofu-version: ${{ needs.integration-plan.outputs.tofu-version }}
+      chroot-directory: test-fixtures/${{ matrix.chroot-directory }}
+      environment: integration
+      tofu-apply: false
+      encoded-secrets: ${{ needs.prepare-encoded-test-secrets.outputs.encoded-secrets }}
 
   integration-skeleton-static-analysis:
     name: integration / skeleton static-analysis (${{ matrix.chroot-directory }})

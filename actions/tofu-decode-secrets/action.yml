@@ -1,0 +1,35 @@
+---
+name: tofu-decode-secrets
+description: Decode double-base64-encoded secrets and export them as environment variables
+author: Kamil Zabielski
+
+branding:
+  icon: lock
+  color: gray-dark
+
+inputs:
+  encoded-secrets:
+    description: |
+      Double-base64-encoded credential pairs, one per line.
+      Format: KEY=DOUBLE_BASE64_VALUE
+      Empty lines and lines starting with # are ignored.
+      Values are decoded with two rounds of base64 before export.
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Decode and export credentials
+      if: ${{ inputs.encoded-secrets != '' }}
+      shell: bash
+      env:
+        ENCODED_SECRETS: ${{ inputs.encoded-secrets }}
+      run: |
+        while IFS= read -r line; do
+          [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+          key="${line%%=*}"
+          encoded_value="${line#*=}"
+          decoded_value="$(echo "$encoded_value" | base64 -d | base64 -d)"
+          echo "${key}=${decoded_value}" >> "$GITHUB_ENV"
+        done <<< "$ENCODED_SECRETS"
