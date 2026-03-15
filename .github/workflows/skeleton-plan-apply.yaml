@@ -28,10 +28,10 @@ on:
         type: boolean
       extra-secrets-encoded:
         description: |
-          Double-base64-encoded credential pairs, one per line.
-          Format: KEY=DOUBLE_BASE64_VALUE
+          Double-base64-encoded secrets, one per line.
+          Format: SECRET_NAME=DOUBLE_BASE64_VALUE
           Empty lines and lines starting with # are ignored.
-          Values are decoded with two rounds of base64 before export.
+          Secret values are decoded with two rounds of base64 before export.
         required: false
         default: ""
         type: string
