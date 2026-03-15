@@ -155,7 +155,7 @@ jobs:
           - unlock-state
     services:
       minio:
-        image: bitnami/minio:latest
+        image: docker.io/bitnami/minio:latest
         ports:
           - 9000:9000
         env:
