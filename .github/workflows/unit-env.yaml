@@ -1,0 +1,73 @@
+---
+name: Unit - tofu-env
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  tofu-env:
+    name: unit - tofu-env
+    runs-on: ubuntu-slim
+    strategy:
+      matrix:
+        include:
+          - name: single-var
+            extra-environment-variables: "TACT_TEST_FOO=bar"
+            expected-var: TACT_TEST_FOO
+            expected-value: bar
+          - name: multi-var
+            extra-environment-variables: |
+              TACT_TEST_A=1
+              TACT_TEST_B=2
+            expected-var: TACT_TEST_B
+            expected-value: "2"
+          - name: with-comments-and-blanks
+            extra-environment-variables: |
+              # This is a comment
+              TACT_TEST_KEEP=yes
+
+            expected-var: TACT_TEST_KEEP
+            expected-value: "yes"
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu-env
+        uses: ./actions/tofu-env
+        with:
+          extra-environment-variables: ${{ matrix.extra-environment-variables }}
+
+      - name: Assert environment variable is set
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="${{ env[matrix.expected-var] }}"
+          expected="${{ matrix.expected-value }}"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "::error::Expected ${{ matrix.expected-var }}='$expected' but got '$actual'"
+            exit 1
+          fi
+          echo "OK: ${{ matrix.expected-var }}=$actual"
+
+  tofu-env-empty:
+    name: unit - tofu-env (empty input)
+    runs-on: ubuntu-slim
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu-env with empty input
+        uses: ./actions/tofu-env
+
+      - name: Assert no unexpected env vars were injected
+        shell: bash
+        run: |
+          set -euo pipefail
+          if env | grep -q '^TACT_TEST_'; then
+            echo "::error::Unexpected TACT_TEST_ env var found"
+            exit 1
+          fi
+          echo "OK: no TACT_TEST_ variables set"

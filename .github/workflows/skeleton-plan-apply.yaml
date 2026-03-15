@@ -26,6 +26,17 @@ on:
         required: false
         default: true
         type: boolean
+      extra-environment-variables:
+        description: |
+          Extra environment variables to set before running tofu commands.
+          Accepts KEY=VALUE pairs, one per line. Empty lines and lines
+          starting with # are ignored.
+          Secrets can be passed by the caller, for example:
+            extra-environment-variables: |
+              AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+        required: false
+        default: ""
+        type: string
     outputs:
       plan-has-changes:
         description: Whether the generated plan contains any changes.
@@ -54,6 +65,11 @@ jobs:
           ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
           path: .tact
 
+      - name: Set extra environment variables
+        uses: ./.tact/actions/tofu-env
+        with:
+          extra-environment-variables: ${{ inputs.extra-environment-variables }}
+
       - name: Run tofu setup
         uses: ./.tact/actions/tofu-setup
         with:
@@ -81,6 +97,11 @@ jobs:
           repository: kordega/tact
           ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
           path: .tact
+
+      - name: Set extra environment variables
+        uses: ./.tact/actions/tofu-env
+        with:
+          extra-environment-variables: ${{ inputs.extra-environment-variables }}
 
       - name: Run tofu setup
         uses: ./.tact/actions/tofu-setup
@@ -111,6 +132,11 @@ jobs:
           repository: kordega/tact
           ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
           path: .tact
+
+      - name: Set extra environment variables
+        uses: ./.tact/actions/tofu-env
+        with:
+          extra-environment-variables: ${{ inputs.extra-environment-variables }}
 
       - name: Run tofu setup
         uses: ./.tact/actions/tofu-setup

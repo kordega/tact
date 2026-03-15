@@ -1,0 +1,31 @@
+---
+name: tofu-env
+description: Export extra environment variables for tofu commands
+author: Kamil Zabielski
+
+branding:
+  icon: settings
+  color: gray-dark
+
+inputs:
+  extra-environment-variables:
+    description: |
+      Extra environment variables to set before running tofu commands.
+      Accepts KEY=VALUE pairs, one per line. Empty lines and lines
+      starting with # are ignored.
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set extra environment variables
+      if: ${{ inputs.extra-environment-variables != '' }}
+      shell: bash
+      env:
+        EXTRA_ENV_VARS: ${{ inputs.extra-environment-variables }}
+      run: |
+        while IFS= read -r line; do
+          [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+          echo "$line" >> "$GITHUB_ENV"
+        done <<< "$EXTRA_ENV_VARS"
