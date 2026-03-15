@@ -70,7 +70,7 @@ jobs:
       - name: Decode extra secrets
         uses: ./.tact/actions/tofu-decode-secrets
         with:
-          encoded-credentials: ${{ inputs.encoded-secrets }}
+          encoded-secrets: ${{ inputs.encoded-secrets }}
 
       - name: Run tofu setup
         uses: ./.tact/actions/tofu-setup
@@ -105,7 +105,7 @@ jobs:
       - name: Decode extra secrets
         uses: ./.tact/actions/tofu-decode-secrets
         with:
-          encoded-credentials: ${{ inputs.encoded-secrets }}
+          encoded-secrets: ${{ inputs.encoded-secrets }}
 
       - name: Run tofu setup
         uses: ./.tact/actions/tofu-setup

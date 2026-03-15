@@ -268,7 +268,7 @@ jobs:
       - name: Decode secret
         uses: ./actions/tofu-decode-secrets
         with:
-          encoded-credentials: ${{ steps.encode.outputs.encoded-credentials }}
+          encoded-secrets: ${{ steps.encode.outputs.encoded-credentials }}
 
       - name: Assert decoded value
         shell: bash
@@ -307,7 +307,7 @@ jobs:
       - name: Decode secrets
         uses: ./actions/tofu-decode-secrets
         with:
-          encoded-credentials: ${{ steps.encode.outputs.encoded-credentials }}
+          encoded-secrets: ${{ steps.encode.outputs.encoded-credentials }}
 
       - name: Assert both decoded
         shell: bash
