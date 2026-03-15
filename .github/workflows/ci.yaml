@@ -72,59 +72,452 @@ jobs:
 
   unit-setup:
     name: unit - tofu-setup
-    needs: 
+    runs-on: ubuntu-slim
+    needs:
       - get-tofu-releases
-    uses: ./.github/workflows/unit-setup.yaml
-    with:
-      tofu-versions: ${{ needs.get-tofu-releases.outputs.releases }}
+    strategy:
+      fail-fast: true
+      matrix:
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        id: tofu-setup
+        uses: ./actions/tofu-setup
+        with:
+          tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Assert tofu setup by checking version
+        shell: bash
+        run: |
+          echo "::group::Show tofu version"
+          tofu version
+          echo "::endgroup::"
+
+          echo "::group::Check tofu version"
+          [ "$(tofu version -json | jq -r '.terraform_version')" = "${{ matrix.tofu-version }}" ] && exit 0 || exit 1
+          echo "::endgroup::"
+
+      - name: Assert provider cache path
+        shell: bash
+        run: |
+          [[ "$TOFU_PLUGIN_CACHE_DIR" = "$RUNNER_TEMP"/tofu-provider-cache-*/.opentofu/plugin-cache ]]
+          [[ "$TF_PLUGIN_CACHE_DIR" = "$TOFU_PLUGIN_CACHE_DIR" ]]
+          [[ "$TOFU_PROVIDER_CACHE_DIR" = "$TOFU_PLUGIN_CACHE_DIR" ]]
+          [[ "$TOFU_PLUGIN_CACHE_DIR" != "$HOME/.terraform.d/plugin-cache" ]]
+          [[ -d "$TOFU_PLUGIN_CACHE_DIR" ]]
 
   unit-setup-version-file:
     name: unit - tofu-setup with tofu-version-file
+    runs-on: ubuntu-slim
     needs:
       - get-tofu-releases
-    uses: ./.github/workflows/unit-setup-version-file.yaml
-    with:
-      tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases)[0] }}
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Prepare tofu version file
+        shell: bash
+        run: |
+          mkdir -p .cache
+          echo "${{ fromJson(needs.get-tofu-releases.outputs.releases)[0] }}" > .cache/tofu-version.txt
+
+      - name: Run tofu setup with tofu version file
+        id: tofu-setup
+        uses: ./actions/tofu-setup
+        with:
+          tofu-version-file: .cache/tofu-version.txt
+
+      - name: Assert tofu setup by checking version
+        shell: bash
+        run: |
+          echo "::group::Show tofu version"
+          tofu version
+          echo "::endgroup::"
+
+          echo "::group::Check tofu version"
+          status=0
+          [ "$(tofu version -json | jq -r '.terraform_version')" = "${{ fromJson(needs.get-tofu-releases.outputs.releases)[0] }}" ] || status=$?
+          echo "::endgroup::"
+          exit "$status"
 
   unit-unlock-state:
     name: unit - tofu-unlock
+    runs-on: ubuntu-latest
     needs:
       - get-tofu-releases
-    uses: ./.github/workflows/unit-unlock-state.yaml
-    with:
-      tofu-versions: ${{ needs.get-tofu-releases.outputs.releases-with-lockfile }}
+    strategy:
+      matrix:
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases-with-lockfile) }}
+        chroot-directory:
+          - unlock-state
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./actions/tofu-setup
+        with:
+          tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Start MinIO
+        shell: bash
+        run: |
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio server /data
+          for _ in $(seq 1 30); do
+            curl -sf http://127.0.0.1:9000/minio/health/live && break
+            sleep 1
+          done
+
+      - name: Create S3 bucket
+        env:
+          AWS_ACCESS_KEY_ID: minioadmin
+          AWS_SECRET_ACCESS_KEY: minioadmin
+        shell: bash
+        run: |
+          aws s3 mb s3://tofu-state \
+            --endpoint-url http://127.0.0.1:9000 \
+            --region us-east-1
+
+      - name: Run tofu init
+        working-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+        shell: bash
+        run: |
+          echo "::group::Run tofu init"
+          tofu init \
+            -input=false
+          echo "::endgroup::"
+
+      - name: Simulate state lock
+        env:
+          AWS_ACCESS_KEY_ID: minioadmin
+          AWS_SECRET_ACCESS_KEY: minioadmin
+        shell: bash
+        run: |
+          echo '{"ID":"test-lock-id","Operation":"OperationTypeApply","Info":"","Who":"test@localhost","Version":"${{ matrix.tofu-version }}","Created":"2024-01-01T00:00:00.000000Z","Path":"tofu-state/terraform.tfstate"}' \
+            | aws s3 cp - s3://tofu-state/terraform.tfstate.tflock \
+                --endpoint-url http://127.0.0.1:9000 \
+                --region us-east-1 \
+                --content-type application/json
+
+      - name: Run tofu unlock-state
+        uses: ./actions/tofu-unlock-state
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+          lock-id: test-lock-id
+
+      - name: Assert state lock has been removed
+        env:
+          AWS_ACCESS_KEY_ID: minioadmin
+          AWS_SECRET_ACCESS_KEY: minioadmin
+        shell: bash
+        run: |
+          ! aws s3 ls s3://tofu-state/terraform.tfstate.tflock \
+            --endpoint-url http://127.0.0.1:9000 \
+            --region us-east-1
 
   unit-fmt:
     name: unit - tofu-fmt
-    needs: 
+    runs-on: ubuntu-slim
+    needs:
       - get-tofu-releases
-    uses: ./.github/workflows/unit-fmt.yaml
-    with:
-      tofu-versions: ${{ needs.get-tofu-releases.outputs.releases }}
+    strategy:
+      matrix:
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
+        chroot-directory:
+          - fmt-passed
+          - fmt-failed
+        include:
+          - chroot-directory: fmt-passed
+            status-code: '0'
+          - chroot-directory: fmt-failed
+            status-code: '3'
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./actions/tofu-setup
+        with:
+          tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Run tofu fmt
+        id: tf-fmt
+        uses: ./actions/tofu-fmt
+        continue-on-error: true
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+
+      - name: Assert tofu fmt status code
+        if: steps.tf-fmt.outputs.status-code != matrix.status-code
+        run: exit 1
 
   unit-plan:
     name: unit - tofu-plan
-    needs: 
+    runs-on: ubuntu-slim
+    needs:
       - get-tofu-releases
-    uses: ./.github/workflows/unit-plan.yaml
-    with:
-      tofu-versions: ${{ needs.get-tofu-releases.outputs.releases }}
+    strategy:
+      matrix:
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
+        chroot-directory:
+          - plan-with-changes
+          - plan-without-changes
+          - plan-with-sops
+        include:
+          - chroot-directory: plan-with-changes
+            plan-has-changes: 'true'
+            plan-add-count: '1'
+            upload-artifact: 'false'
+            tofu-apply: 'true'
+            tofu-destroy: 'true'
+            sops-age-key: ''
+          - chroot-directory: plan-without-changes
+            plan-has-changes: 'false'
+            plan-add-count: '0'
+            upload-artifact: 'false'
+            tofu-apply: 'true'
+            tofu-destroy: 'true'
+            sops-age-key: ''
+          - chroot-directory: plan-with-sops
+            plan-has-changes: 'true'
+            plan-add-count: '1'
+            upload-artifact: 'false'
+            tofu-apply: 'true'
+            tofu-destroy: 'true'
+            sops-age-key: 'AGE-SECRET-KEY-18EDM87RHYPH4DNF8V8D80DQPZLY8M08EYD0AYF42A0HJAN225ZGS6EHY7X'
+    env:
+      SOPS_AGE_KEY: ${{ matrix.sops-age-key }}
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./actions/tofu-setup
+        with:
+          tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Run tofu plan for apply test fixture
+        id: tf-plan
+        uses: ./actions/tofu-plan
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          upload-artifact: ${{ matrix.upload-artifact }}
+
+      - name: Assert tofu plan change counts
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "${{ steps.tf-plan.outputs.plan-has-changes }}" = "${{ matrix.plan-has-changes }}" ]
+          [ "${{ steps.tf-plan.outputs.plan-add-count }}" = "${{ matrix.plan-add-count }}" ]
+          [ "${{ steps.tf-plan.outputs.plan-change-count }}" = "0" ]
+          [ "${{ steps.tf-plan.outputs.plan-destroy-count }}" = "0" ]
+          [ "${{ steps.tf-plan.outputs.plan-replace-count }}" = "0" ]
+          [ "${{ steps.tf-plan.outputs.plan-import-count }}" = "0" ]
+
+      - name: Run tofu apply without artifact
+        id: tf-apply-no-artifact
+        uses: ./actions/tofu-apply
+        if: matrix.tofu-apply == 'true' && matrix.upload-artifact == 'false'
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
+
+      - name: Run tofu apply with artifact
+        id: tf-apply-with-artifact
+        uses: ./actions/tofu-apply
+        if: matrix.tofu-apply == 'true' && matrix.upload-artifact == 'true'
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
+
+      - name: Run tofu plan for destroy test fixture
+        id: tf-plan-destroy
+        uses: ./actions/tofu-plan
+        if: matrix.tofu-destroy == 'true'
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          tofu-destroy: '${{ matrix.tofu-destroy }}'
+          upload-artifact: '${{ matrix.upload-artifact }}'
+
+      - name: Run tofu apply for destroy test fixture
+        id: tf-apply-destroy
+        uses: ./actions/tofu-apply
+        if: matrix.tofu-destroy == 'true'
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
+
+  unit-plan-init-backend:
+    name: unit - tofu-plan - init-backend
+    runs-on: ubuntu-slim
+    needs:
+      - get-tofu-releases
+    strategy:
+      matrix:
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
+        tofu-init-backend:
+          - 'true'
+          - 'false'
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./actions/tofu-setup
+        with:
+          tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Run tofu plan with tofu-init-backend=${{ matrix.tofu-init-backend }}
+        id: tf-plan
+        uses: ./actions/tofu-plan
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/plan-with-changes
+          environment: ${{ matrix.tofu-version }}
+          tofu-init-backend: '${{ matrix.tofu-init-backend }}'
+          upload-artifact: 'false'
+
+      - name: Assert tofu plan change counts
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "${{ steps.tf-plan.outputs.plan-has-changes }}" = "true" ]
+          [ "${{ steps.tf-plan.outputs.plan-add-count }}" = "1" ]
+
+      - name: Run tofu apply with tofu-init-backend=${{ matrix.tofu-init-backend }}
+        uses: ./actions/tofu-apply
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/plan-with-changes
+          environment: ${{ matrix.tofu-version }}
+          tofu-init-backend: '${{ matrix.tofu-init-backend }}'
+          plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
+
+      - name: Run tofu plan for destroy
+        id: tf-plan-destroy
+        uses: ./actions/tofu-plan
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/plan-with-changes
+          environment: ${{ matrix.tofu-version }}
+          tofu-init-backend: '${{ matrix.tofu-init-backend }}'
+          tofu-destroy: 'true'
+          upload-artifact: 'false'
+
+      - name: Run tofu apply for destroy
+        uses: ./actions/tofu-apply
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/plan-with-changes
+          environment: ${{ matrix.tofu-version }}
+          tofu-init-backend: '${{ matrix.tofu-init-backend }}'
+          plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
 
   unit-taint:
     name: unit - tofu-taint
+    runs-on: ubuntu-slim
     needs:
       - get-tofu-releases
-    uses: ./.github/workflows/unit-taint.yaml
-    with:
-      tofu-versions: ${{ needs.get-tofu-releases.outputs.releases }}
+    strategy:
+      matrix:
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
+        chroot-directory:
+          - taint-resource
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./actions/tofu-setup
+        with:
+          tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Run tofu plan for taint test fixture
+        id: tf-plan
+        uses: ./actions/tofu-plan
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          upload-artifact: 'false'
+
+      - name: Run tofu apply to create state
+        uses: ./actions/tofu-apply
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+          plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
+
+      - name: Run tofu taint
+        uses: ./actions/tofu-taint
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+          address: time_static.this
+
+      - name: Assert resource is marked for tainting
+        working-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+        shell: bash
+        run: |
+          tofu state pull | jq -e '
+            .resources[]
+            | select(.type == "time_static" and .name == "this")
+            | .instances[].status == "tainted"
+          '
 
   unit-import:
     name: unit - tofu-import
+    runs-on: ubuntu-slim
     needs:
       - get-tofu-releases
-    uses: ./.github/workflows/unit-import.yaml
-    with:
-      tofu-versions: ${{ needs.get-tofu-releases.outputs.releases }}
+    strategy:
+      matrix:
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
+        chroot-directory:
+          - plan-with-import
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./actions/tofu-setup
+        with:
+          tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Run tofu plan for import test fixture
+        id: tf-plan
+        uses: ./actions/tofu-plan
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          upload-artifact: 'false'
+
+      - name: Assert tofu plan import count
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "${{ steps.tf-plan.outputs.plan-import-count }}" = "1" ]
+
+      - name: Run tofu apply to import resource
+        uses: ./actions/tofu-apply
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+          plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
+
+      - name: Assert resource has been imported into state
+        working-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+        shell: bash
+        run: |
+          tofu state pull | jq -e '
+            .resources[]
+            | select(.type == "time_static" and .name == "this")
+            | .instances[].attributes.rfc3339 == "2024-01-01T00:00:00Z"
+          '
 
   integration-plan:
     name: integration / plan
