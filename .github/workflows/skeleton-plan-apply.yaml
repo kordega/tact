@@ -35,15 +35,6 @@ on:
         required: false
         default: ""
         type: string
-      extra-secrets-encoded:
-        description: |
-          Double-base64-encoded secrets, one per line.
-          Format: SECRET_NAME=DOUBLE_BASE64_VALUE
-          Empty lines and lines starting with # are ignored.
-          Secret values are decoded with two rounds of base64 before export.
-        required: false
-        default: ""
-        type: string
     outputs:
       plan-has-changes:
         description: Whether the generated plan contains any changes.
@@ -85,9 +76,7 @@ jobs:
       - name: Decode extra secrets
         uses: ./.tact/actions/tofu-decode-secrets
         with:
-          encoded-credentials: |
-            ${{ steps.encode-secrets.outputs.encoded-credentials }}
-            ${{ inputs.extra-secrets-encoded }}
+          encoded-credentials: ${{ steps.encode-secrets.outputs.encoded-credentials }}
 
       - name: Run tofu setup
         uses: ./.tact/actions/tofu-setup
@@ -128,9 +117,7 @@ jobs:
       - name: Decode extra secrets
         uses: ./.tact/actions/tofu-decode-secrets
         with:
-          encoded-credentials: |
-            ${{ steps.encode-secrets.outputs.encoded-credentials }}
-            ${{ inputs.extra-secrets-encoded }}
+          encoded-credentials: ${{ steps.encode-secrets.outputs.encoded-credentials }}
 
       - name: Run tofu setup
         uses: ./.tact/actions/tofu-setup
