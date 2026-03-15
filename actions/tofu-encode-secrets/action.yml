@@ -1,0 +1,46 @@
+---
+name: tofu-encode-secrets
+description: Encode plaintext KEY=VALUE secrets with double-base64 encoding
+author: Kamil Zabielski
+
+branding:
+  icon: lock
+  color: gray-dark
+
+inputs:
+  credentials:
+    description: |
+      Plaintext credential pairs, one per line.
+      Format: KEY=VALUE
+      Empty lines and lines starting with # are ignored.
+    required: false
+    default: ""
+
+outputs:
+  encoded-credentials:
+    description: |
+      Double-base64-encoded credential pairs, one per line.
+      Format: KEY=DOUBLE_BASE64_VALUE
+      Can be passed to tofu-decode-secrets as encoded-credentials input.
+    value: ${{ steps.encode.outputs.encoded-credentials }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Encode credentials
+      id: encode
+      shell: bash
+      env:
+        CREDENTIALS: ${{ inputs.credentials }}
+      run: |
+        {
+          echo 'encoded-credentials<<EOF'
+          while IFS= read -r line; do
+            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+            key="${line%%=*}"
+            value="${line#*=}"
+            encoded_value="$(echo -n "$value" | base64 -w0 | base64 -w0)"
+            echo "${key}=${encoded_value}"
+          done <<< "$CREDENTIALS"
+          echo 'EOF'
+        } >> "$GITHUB_OUTPUT"

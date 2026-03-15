@@ -26,12 +26,12 @@ on:
         required: false
         default: true
         type: boolean
-      extra-secrets-encoded:
+      extra-secrets:
         description: |
-          Double-base64-encoded secrets, one per line.
-          Format: SECRET_NAME=DOUBLE_BASE64_VALUE
+          Plaintext secrets, one per line.
+          Format: SECRET_NAME=VALUE
           Empty lines and lines starting with # are ignored.
-          Secret values are decoded with two rounds of base64 before export.
+          Values are encoded with double-base64 before export.
         required: false
         default: ""
         type: string
@@ -67,10 +67,16 @@ jobs:
           ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
           path: .tact
 
+      - name: Encode extra secrets
+        id: encode-secrets
+        uses: ./.tact/actions/tofu-encode-secrets
+        with:
+          credentials: ${{ inputs.extra-secrets }}
+
       - name: Decode extra secrets
         uses: ./.tact/actions/tofu-decode-secrets
         with:
-          encoded-credentials: ${{ inputs.extra-secrets-encoded }}
+          encoded-credentials: ${{ steps.encode-secrets.outputs.encoded-credentials }}
 
       - name: Run tofu setup
         uses: ./.tact/actions/tofu-setup
@@ -102,10 +108,16 @@ jobs:
           ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
           path: .tact
 
+      - name: Encode extra secrets
+        id: encode-secrets
+        uses: ./.tact/actions/tofu-encode-secrets
+        with:
+          credentials: ${{ inputs.extra-secrets }}
+
       - name: Decode extra secrets
         uses: ./.tact/actions/tofu-decode-secrets
         with:
-          encoded-credentials: ${{ inputs.extra-secrets-encoded }}
+          encoded-credentials: ${{ steps.encode-secrets.outputs.encoded-credentials }}
 
       - name: Run tofu setup
         uses: ./.tact/actions/tofu-setup
