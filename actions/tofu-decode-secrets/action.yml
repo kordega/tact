@@ -8,7 +8,7 @@ branding:
   color: gray-dark
 
 inputs:
-  encoded-credentials:
+  encoded-secrets:
     description: |
       Double-base64-encoded credential pairs, one per line.
       Format: KEY=DOUBLE_BASE64_VALUE
@@ -21,10 +21,10 @@ runs:
   using: "composite"
   steps:
     - name: Decode and export credentials
-      if: ${{ inputs.encoded-credentials != '' }}
+      if: ${{ inputs.encoded-secrets != '' }}
       shell: bash
       env:
-        ENCODED_CREDENTIALS: ${{ inputs.encoded-credentials }}
+        ENCODED_SECRETS: ${{ inputs.encoded-secrets }}
       run: |
         while IFS= read -r line; do
           [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
@@ -32,4 +32,4 @@ runs:
           encoded_value="${line#*=}"
           decoded_value="$(echo "$encoded_value" | base64 -d | base64 -d)"
           echo "${key}=${decoded_value}" >> "$GITHUB_ENV"
-        done <<< "$ENCODED_CREDENTIALS"
+        done <<< "$ENCODED_SECRETS"
