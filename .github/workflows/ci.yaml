@@ -155,7 +155,7 @@ jobs:
           - unlock-state
     services:
       garage:
-        image: ghcr.io/garagehq/garage:stable
+        image: dxflrs/garage:latest
         ports:
           - 3900:3900 # S3 API Port
           - 3901:3901 # RPC Port
@@ -180,7 +180,7 @@ jobs:
       - name: Initialize garage cluster and prepare S3 bucket for state storage
         id: garage_setup # Crucial: You need this ID to reference the outputs later
         run: |
-          GARAGE_CONTAINER=$(docker ps -q -f "ancestor=ghcr.io/garagehq/garage:stable")
+          GARAGE_CONTAINER=$(docker ps -q -f "ancestor=dxflrs/garage:latest")
 
           # Initialize cluster and bucket
           NODE_ID=$(docker exec $GARAGE_CONTAINER /garage status | grep -oE '^[0-9a-f]{64}')
