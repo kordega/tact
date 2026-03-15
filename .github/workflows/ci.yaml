@@ -145,7 +145,7 @@ jobs:
 
   unit-unlock-state:
     name: unit - tofu-unlock
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     needs:
       - get-tofu-releases
     strategy:
