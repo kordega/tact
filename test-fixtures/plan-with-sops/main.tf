@@ -1,11 +1,5 @@
-variable "sops_secret_file" {
-  description = "Path to the SOPS-encrypted secrets file."
-  type        = string
-  default     = "${path.module}/secret.sops.yaml"
-}
-
 data "sops_file" "secrets" {
-  source_file = var.sops_secret_file
+  source_file = "${path.module}/secret.sops.yaml"
 }
 
 resource "terraform_data" "from_secret" {
