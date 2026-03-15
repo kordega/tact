@@ -26,15 +26,6 @@ on:
         required: false
         default: true
         type: boolean
-      encoded-secrets:
-        description: |
-          Double-base64-encoded secrets, one per line.
-          Format: SECRET_NAME=DOUBLE_BASE64_VALUE
-          Empty lines and lines starting with # are ignored.
-          Use the tofu-encode-secrets action to produce this value.
-        required: false
-        default: ""
-        type: string
     outputs:
       plan-has-changes:
         description: Whether the generated plan contains any changes.
@@ -67,11 +58,6 @@ jobs:
           ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
           path: .tact
 
-      - name: Decode extra secrets
-        uses: ./.tact/actions/tofu-decode-secrets
-        with:
-          encoded-secrets: ${{ inputs.encoded-secrets }}
-
       - name: Run tofu setup
         uses: ./.tact/actions/tofu-setup
         with:
@@ -101,11 +87,6 @@ jobs:
           repository: kordega/tact
           ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
           path: .tact
-
-      - name: Decode extra secrets
-        uses: ./.tact/actions/tofu-decode-secrets
-        with:
-          encoded-secrets: ${{ inputs.encoded-secrets }}
 
       - name: Run tofu setup
         uses: ./.tact/actions/tofu-setup
