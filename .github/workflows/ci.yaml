@@ -154,19 +154,53 @@ jobs:
         chroot-directory:
           - unlock-state
     services:
-      minio:
-        image: docker.io/bitnami/minio:latest
+      garage:
+        image: ghcr.io/garagehq/garage:stable
         ports:
-          - 9000:9000
+          - 3900:3900 # S3 API Port
+          - 3901:3901 # RPC Port
         env:
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadmin
+          GARAGE_METADATA_DIR: /tmp/meta
+          GARAGE_DATA_DIR: /tmp/data
+          GARAGE_DB_ENGINE: sqlite
+          GARAGE_REPLICATION_FACTOR: 1
+          GARAGE_RPC_BIND_ADDR: "[::]:3901"
+          GARAGE_RPC_PUBLIC_ADDR: "127.0.0.1:3901"
+          GARAGE_RPC_SECRET: "garage_ci_secret_123"
+          GARAGE_S3_API_API_BIND_ADDR: "[::]:3900"
+          GARAGE_S3_API_S3_REGION: "garage"
+        # We check the RPC port to ensure the daemon is live
         options: >-
-          --health-cmd "curl -sf http://127.0.0.1:9000/minio/health/live || exit 1"
+          --health-cmd "garage status || exit 1"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
     steps:
+
+      - name: Initialize garage cluster and prepare S3 bucket for state storage
+        id: garage_setup # Crucial: You need this ID to reference the outputs later
+        run: |
+          GARAGE_CONTAINER=$(docker ps -q -f "ancestor=ghcr.io/garagehq/garage:stable")
+
+          # Initialize cluster and bucket
+          NODE_ID=$(docker exec $GARAGE_CONTAINER /garage status | grep -oE '^[0-9a-f]{64}')
+          docker exec $GARAGE_CONTAINER /garage layout assign -z dc1 -c 1G $NODE_ID
+          docker exec $GARAGE_CONTAINER /garage layout apply --version 1
+          docker exec $GARAGE_CONTAINER /garage bucket create tofu-state
+
+          # Generate credentials and grant permissions
+          CREDENTIALS=$(docker exec $GARAGE_CONTAINER /garage key new --name test-key)
+          ACCESS_KEY=$(echo "$CREDENTIALS" | grep -i 'Access key' | awk '{print $NF}')
+          SECRET_KEY=$(echo "$CREDENTIALS" | grep -i 'Secret key' | awk '{print $NF}')
+          
+          docker exec $GARAGE_CONTAINER /garage bucket allow --read --write --owner tofu-state --key test-key
+
+          # 4. Export credentials to GITHUB_OUTPUT
+          echo "aws_access_key_id=$ACCESS_KEY" >> "$GITHUB_OUTPUT"
+          echo "aws_secret_access_key=$SECRET_KEY" >> "$GITHUB_OUTPUT"
+          echo "aws_region=garage" >> "$GITHUB_OUTPUT"
+          echo "aws_s3_endpoint=http://127.0.0.1:3900" >> "$GITHUB_OUTPUT"
+
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -175,17 +209,10 @@ jobs:
         with:
           tofu-version: ${{ matrix.tofu-version }}
 
-      - name: Create S3 bucket
-        env:
-          AWS_ACCESS_KEY_ID: minioadmin
-          AWS_SECRET_ACCESS_KEY: minioadmin
-        shell: bash
-        run: |
-          aws s3 mb s3://tofu-state \
-            --endpoint-url http://127.0.0.1:9000 \
-            --region us-east-1
-
       - name: Run tofu init
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.garage_setup.outputs.aws_access_key_id }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.garage_setup.outputs.aws_secret_access_key }}
         working-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
         shell: bash
         run: |
@@ -196,8 +223,8 @@ jobs:
 
       - name: Simulate state lock
         env:
-          AWS_ACCESS_KEY_ID: minioadmin
-          AWS_SECRET_ACCESS_KEY: minioadmin
+          AWS_ACCESS_KEY_ID: ${{ steps.garage_setup.outputs.aws_access_key_id }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.garage_setup.outputs.aws_secret_access_key }}
         shell: bash
         run: |
           echo '{"ID":"test-lock-id","Operation":"OperationTypeApply","Info":"","Who":"test@localhost","Version":"${{ matrix.tofu-version }}","Created":"2024-01-01T00:00:00.000000Z","Path":"tofu-state/terraform.tfstate"}' \
@@ -207,6 +234,9 @@ jobs:
                 --content-type application/json
 
       - name: Run tofu unlock-state
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.garage_setup.outputs.aws_access_key_id }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.garage_setup.outputs.aws_secret_access_key }}
         uses: ./actions/tofu-unlock-state
         with:
           chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
@@ -214,8 +244,8 @@ jobs:
 
       - name: Assert state lock has been removed
         env:
-          AWS_ACCESS_KEY_ID: minioadmin
-          AWS_SECRET_ACCESS_KEY: minioadmin
+          AWS_ACCESS_KEY_ID: ${{ steps.garage_setup.outputs.aws_access_key_id }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.garage_setup.outputs.aws_secret_access_key }}
         shell: bash
         run: |
           ! aws s3 ls s3://tofu-state/terraform.tfstate.tflock \
