@@ -30,6 +30,12 @@ inputs:
     required: false
     default: "true"
 
+  sops-secret:
+    description: |
+      The SOPS decryption key (base64 or raw) to be used for decrypting SOPS secrets.
+      If provided, will be set as SOPS_AGE_KEY or SOPS_KMS_KEY environment variable.
+    required: false
+
 runs:
   using: "composite"
   steps:
@@ -39,6 +45,12 @@ runs:
       run: |
         echo "::error::tofu-init-backend must be 'true' or 'false', got '${{ inputs.tofu-init-backend }}'"
         exit 1
+
+    - name: Export SOPS secret if provided
+      if: ${{ inputs.sops-secret != '' }}
+      shell: bash
+      run: |
+        echo "SOPS_AGE_KEY=${{ inputs.sops-secret }}" >> $GITHUB_ENV
 
     - name: Either plan-file-path or plan-artifact-name must be provided
       if: ${{ inputs.plan-file-path == '' && inputs.plan-artifact-name == '' }}

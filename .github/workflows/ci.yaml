@@ -278,6 +278,7 @@ jobs:
             tofu-apply: 'true'
             tofu-destroy: 'true'
             sops-age-key: ''
+            verify-output: 'rfc3339'
           - chroot-directory: plan-without-changes
             plan-has-changes: 'false'
             plan-add-count: '0'
@@ -285,6 +286,7 @@ jobs:
             tofu-apply: 'true'
             tofu-destroy: 'true'
             sops-age-key: ''
+            verify-output: ''
           - chroot-directory: plan-with-sops
             plan-has-changes: 'true'
             plan-add-count: '1'
@@ -292,6 +294,7 @@ jobs:
             tofu-apply: 'true'
             tofu-destroy: 'true'
             sops-age-key: 'AGE-SECRET-KEY-18EDM87RHYPH4DNF8V8D80DQPZLY8M08EYD0AYF42A0HJAN225ZGS6EHY7X'
+            verify-output: 'sops_secret_value'
     env:
       SOPS_AGE_KEY: ${{ matrix.sops-age-key }}
     steps:
@@ -339,6 +342,16 @@ jobs:
           chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
           plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
+
+      - name: Assert tofu output
+        if: matrix.verify-output != ''
+        working-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          value="$(tofu output -json '${{ matrix.verify-output }}' | jq -r '.')"
+          echo "Output ${{ matrix.verify-output }}: $value"
+          [ -n "$value" ] && [ "$value" != "null" ]
 
       - name: Run tofu plan for destroy test fixture
         id: tf-plan-destroy
