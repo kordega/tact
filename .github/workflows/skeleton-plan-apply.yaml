@@ -26,13 +26,12 @@ on:
         required: false
         default: true
         type: boolean
-      extra-environment-variables:
+      encoded-credentials:
         description: |
-          Extra environment variables to set before running tofu commands.
-          Accepts KEY=VALUE pairs, one per line. Empty lines and lines
-          starting with # are ignored.
-          Secrets can be passed by the caller using secrets context, e.g.
-            AWS_ACCESS_KEY_ID=<value of secrets.AWS_ACCESS_KEY_ID>
+          Double-base64-encoded credential pairs, one per line.
+          Format: KEY=DOUBLE_BASE64_VALUE
+          Empty lines and lines starting with # are ignored.
+          Values are decoded with two rounds of base64 before export.
         required: false
         default: ""
         type: string
@@ -68,10 +67,10 @@ jobs:
           ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
           path: .tact
 
-      - name: Set extra environment variables
-        uses: ./.tact/actions/tofu-env
+      - name: Decode secrets
+        uses: ./.tact/actions/tofu-decode-secrets
         with:
-          extra-environment-variables: ${{ inputs.extra-environment-variables }}
+          encoded-credentials: ${{ inputs.encoded-credentials }}
 
       - name: Run tofu setup
         uses: ./.tact/actions/tofu-setup
@@ -103,10 +102,10 @@ jobs:
           ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
           path: .tact
 
-      - name: Set extra environment variables
-        uses: ./.tact/actions/tofu-env
+      - name: Decode secrets
+        uses: ./.tact/actions/tofu-decode-secrets
         with:
-          extra-environment-variables: ${{ inputs.extra-environment-variables }}
+          encoded-credentials: ${{ inputs.encoded-credentials }}
 
       - name: Run tofu setup
         uses: ./.tact/actions/tofu-setup
