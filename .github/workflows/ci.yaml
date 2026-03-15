@@ -161,6 +161,7 @@ jobs:
         env:
           MINIO_ROOT_USER: minioadmin
           MINIO_ROOT_PASSWORD: minioadmin
+        command: ["server", "/data"]
         options: >-
           --entrypoint "minio server /data"
           --health-cmd "curl -sf http://127.0.0.1:9000/minio/health/live || exit 1"
