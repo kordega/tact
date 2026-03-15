@@ -26,7 +26,7 @@ on:
         required: false
         default: true
         type: boolean
-      encoded-credentials:
+      extra-secrets-encoded:
         description: |
           Double-base64-encoded credential pairs, one per line.
           Format: KEY=DOUBLE_BASE64_VALUE
@@ -67,10 +67,10 @@ jobs:
           ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
           path: .tact
 
-      - name: Decode secrets
+      - name: Decode extra secrets
         uses: ./.tact/actions/tofu-decode-secrets
         with:
-          encoded-credentials: ${{ inputs.encoded-credentials }}
+          encoded-credentials: ${{ inputs.extra-secrets-encoded }}
 
       - name: Run tofu setup
         uses: ./.tact/actions/tofu-setup
@@ -102,10 +102,10 @@ jobs:
           ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
           path: .tact
 
-      - name: Decode secrets
+      - name: Decode extra secrets
         uses: ./.tact/actions/tofu-decode-secrets
         with:
-          encoded-credentials: ${{ inputs.encoded-credentials }}
+          encoded-credentials: ${{ inputs.extra-secrets-encoded }}
 
       - name: Run tofu setup
         uses: ./.tact/actions/tofu-setup
