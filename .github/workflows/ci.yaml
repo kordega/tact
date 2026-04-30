@@ -432,9 +432,6 @@ jobs:
         chroot-directory:
           - plan-with-changes
           - plan-without-changes
-        plan-artifact-uploaded:
-          - true
-          - false
         upload-artifact-on-no-changes:
           - true
           - false
