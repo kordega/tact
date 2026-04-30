@@ -41,6 +41,12 @@ inputs:
       Defaults to true.
     required: false
     default: "true"
+  upload-artifact-on-no-changes:
+    description: |
+      Whether to upload the generated tf plan file as a GitHub Actions artifact when the plan has no changes.
+      Accepts true/false. Defaults to true.
+    required: false
+    default: "false"
   tofu-init-backend:
     description: |
       Whether to initialize the backend during tofu init.
@@ -79,6 +85,9 @@ outputs:
   plan-replace-count:
     description: Number of resources the plan will replace.
     value: ${{ steps.tf-plan.outputs.plan-replace-count }}
+  plan-artifact-uploaded:
+    description: Whether the tf plan was uploaded as a GitHub Actions artifact.
+    value: ${{ steps.artifact-uploaded.outputs.plan-artifact-uploaded }}
 
 runs:
   using: "composite"
@@ -88,6 +97,13 @@ runs:
       shell: bash
       run: |
         echo "::error::tofu-init-backend must be 'true' or 'false', got '${{ inputs.tofu-init-backend }}'"
+        exit 1
+
+    - name: Validate upload-artifact-on-no-changes input
+      if: ${{ inputs.upload-artifact-on-no-changes != 'true' && inputs.upload-artifact-on-no-changes != 'false' }}
+      shell: bash
+      run: |
+        echo "::error::upload-artifact-on-no-changes must be 'true' or 'false', got '${{ inputs.upload-artifact-on-no-changes }}'"
         exit 1
 
     - name: Show tofu version
@@ -187,10 +203,22 @@ runs:
         } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Upload tfplan as artifact
-      if: ${{ inputs.upload-artifact == 'true' }}
+      id: upload-artifact
+      if: ${{ inputs.upload-artifact == 'true' && (inputs.upload-artifact-on-no-changes == 'true' || steps.tf-plan.outputs.plan-has-changes == 'true') }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
         path: ${{ steps.tf-plan.outputs.plan-file-path }}
         retention-days: ${{ inputs.plan-retention-days }}
         if-no-files-found: error
+
+    - name: Set plan-artifact-uploaded output
+      id: artifact-uploaded
+      if: always()
+      shell: bash
+      run: |
+        if [[ "${{ steps.upload-artifact.outcome }}" == "success" ]]; then
+          echo "plan-artifact-uploaded=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "plan-artifact-uploaded=false" >> "$GITHUB_OUTPUT"
+        fi

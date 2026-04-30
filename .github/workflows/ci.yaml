@@ -421,6 +421,63 @@ jobs:
           tofu-init-backend: '${{ matrix.tofu-init-backend }}'
           plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
 
+  unit-plan-upload-artifact-on-no-changes:
+    name: unit - tofu-plan - upload-artifact-on-no-changes
+    runs-on: ubuntu-slim
+    needs:
+      - get-tofu-releases
+    strategy:
+      matrix:
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
+        include:
+          - chroot-directory: plan-with-changes
+            upload-artifact-on-no-changes: 'true'
+            plan-artifact-uploaded: 'true'
+          - chroot-directory: plan-with-changes
+            upload-artifact-on-no-changes: 'false'
+            plan-artifact-uploaded: 'true'
+          - chroot-directory: plan-without-changes
+            upload-artifact-on-no-changes: 'true'
+            plan-artifact-uploaded: 'true'
+          - chroot-directory: plan-without-changes
+            upload-artifact-on-no-changes: 'false'
+            plan-artifact-uploaded: 'false'
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run tofu setup
+        uses: ./actions/tofu-setup
+        with:
+          tofu-version: ${{ matrix.tofu-version }}
+
+      - name: Run tofu plan with upload-artifact-on-no-changes=${{ matrix.upload-artifact-on-no-changes }}
+        id: tf-plan
+        uses: ./actions/tofu-plan
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+          environment: ${{ matrix.tofu-version }}
+          upload-artifact: 'true'
+          upload-artifact-on-no-changes: '${{ matrix.upload-artifact-on-no-changes }}'
+
+      - name: Assert plan-artifact-uploaded
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "${{ steps.tf-plan.outputs.plan-artifact-uploaded }}" = "${{ matrix.plan-artifact-uploaded }}" ]
+
+      - name: Assert artifact exists via GitHub API
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact_name="${{ steps.tf-plan.outputs.plan-artifact-name }}"
+          artifact_exists="$(gh api \
+            "/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
+            --jq ".artifacts | any(.name == \"$artifact_name\")")"
+          [ "$artifact_exists" = "${{ matrix.plan-artifact-uploaded }}" ]
+
   unit-taint:
     name: unit - tofu-taint
     runs-on: ubuntu-slim
