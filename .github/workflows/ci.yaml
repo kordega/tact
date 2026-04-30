@@ -429,19 +429,15 @@ jobs:
     strategy:
       matrix:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
-        include:
-          - chroot-directory: plan-with-changes
-            upload-artifact-on-no-changes: 'true'
-            plan-artifact-uploaded: 'true'
-          - chroot-directory: plan-with-changes
-            upload-artifact-on-no-changes: 'false'
-            plan-artifact-uploaded: 'true'
-          - chroot-directory: plan-without-changes
-            upload-artifact-on-no-changes: 'true'
-            plan-artifact-uploaded: 'true'
-          - chroot-directory: plan-without-changes
-            upload-artifact-on-no-changes: 'false'
-            plan-artifact-uploaded: 'false'
+        chroot-directory:
+          - plan-with-changes
+          - plan-without-changes
+        plan-artifact-uploaded:
+          - true
+          - false
+        upload-artifact-on-no-changes:
+          - true
+          - false
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
