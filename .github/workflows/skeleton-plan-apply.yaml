@@ -29,7 +29,7 @@ on:
       upload-artifact-on-no-changes:
         description: Whether to upload the plan artifact when the plan has no changes.
         required: false
-        default: true
+        default: false
         type: boolean
     outputs:
       plan-has-changes:
