@@ -44,7 +44,7 @@ inputs:
   upload-artifact-on-no-changes:
     description: |
       Whether to upload the generated tf plan file as a GitHub Actions artifact when the plan has no changes.
-      Accepts true/false. Defaults to true.
+      Accepts true/false. Defaults to false.
     required: false
     default: "false"
   tofu-init-backend:
