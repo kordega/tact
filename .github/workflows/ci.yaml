@@ -457,19 +457,27 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          [ "${{ steps.tf-plan.outputs.plan-artifact-uploaded }}" = "${{ matrix.plan-artifact-uploaded }}" ]
+          expected_uploaded="true"
+          if [ "${{ matrix.chroot-directory }}" = "plan-without-changes" ] && [ "${{ matrix.upload-artifact-on-no-changes }}" = "false" ]; then
+            expected_uploaded="false"
+          fi
+          [ "${{ steps.tf-plan.outputs.plan-artifact-uploaded }}" = "$expected_uploaded" ]
 
       - name: Assert artifact exists via GitHub API
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        shell: bash
         run: |
           set -euo pipefail
+          expected_uploaded="true"
+          if [ "${{ matrix.chroot-directory }}" = "plan-without-changes" ] && [ "${{ matrix.upload-artifact-on-no-changes }}" = "false" ]; then
+            expected_uploaded="false"
+          fi
           artifact_name="${{ steps.tf-plan.outputs.plan-artifact-name }}"
           artifact_exists="$(gh api \
             "/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
             --jq ".artifacts | any(.name == \"$artifact_name\")")"
-          [ "$artifact_exists" = "${{ matrix.plan-artifact-uploaded }}" ]
+          [ "$artifact_exists" = "$expected_uploaded" ]
 
   unit-taint:
     name: unit - tofu-taint
