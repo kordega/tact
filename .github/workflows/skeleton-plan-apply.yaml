@@ -26,6 +26,11 @@ on:
         required: false
         default: true
         type: boolean
+      upload-artifact-on-no-changes:
+        description: Whether to upload the plan artifact when the plan has no changes.
+        required: false
+        default: false
+        type: boolean
     outputs:
       plan-has-changes:
         description: Whether the generated plan contains any changes.
@@ -36,6 +41,9 @@ on:
       plan-artifact-name:
         description: Name of the uploaded plan artifact.
         value: ${{ jobs.tofu-plan.outputs.plan-artifact-name }}
+      plan-artifact-uploaded:
+        description: Whether the plan was uploaded as a GitHub Actions artifact.
+        value: ${{ jobs.tofu-plan.outputs.plan-artifact-uploaded }}
 
 permissions:
   contents: read
@@ -47,6 +55,7 @@ jobs:
       plan-has-changes: ${{ steps.tf-plan.outputs.plan-has-changes }}
       plan-add-count: ${{ steps.tf-plan.outputs.plan-add-count }}
       plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
+      plan-artifact-uploaded: ${{ steps.tf-plan.outputs.plan-artifact-uploaded }}
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -71,6 +80,7 @@ jobs:
           chroot-directory: ${{ inputs.chroot-directory }}
           environment: ${{ inputs.environment }}
           upload-artifact: 'true'
+          upload-artifact-on-no-changes: ${{ inputs.upload-artifact-on-no-changes }}
 
   tofu-apply:
     if: needs.tofu-plan.outputs.plan-has-changes == 'true' && inputs.tofu-apply
