@@ -129,6 +129,7 @@ jobs:
   tofu-apply:
     if: needs.tofu-plan.outputs.plan-has-changes == 'true' && inputs.tofu-apply
     runs-on: ubuntu-slim
+    environment: ${{ inputs.environment }}
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.aws-access-key-id }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.aws-secret-access-key }}
