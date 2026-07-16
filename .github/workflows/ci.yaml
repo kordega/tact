@@ -290,6 +290,8 @@ jobs:
             tofu-apply: 'true'
             tofu-destroy: 'true'
             sops-age-key: 'AGE-SECRET-KEY-18EDM87RHYPH4DNF8V8D80DQPZLY8M08EYD0AYF42A0HJAN225ZGS6EHY7X'
+    env:
+      SOPS_AGE_KEY: ${{ matrix.sops-age-key }}
     steps:
       - name: Checkout the repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
@@ -579,12 +581,19 @@ jobs:
     outputs:
       extra-secret-environment-variables: ${{ steps.encode.outputs.extra-secret-environment-variables }}
     steps:
-      - name: Encode SOPS age key
+      - name: Encode keys
         id: encode
         env:
-          SOPS_AGE_KEY: 'AGE-SECRET-KEY-18EDM87RHYPH4DNF8V8D80DQPZLY8M08EYD0AYF42A0HJAN225ZGS6EHY7X'
+          SOPS_AGE_KEY_1: 'AGE-SECRET-KEY-18EDM87RHYPH4DNF8V8D80DQPZLY8M08EYD0AYF42A0HJAN225ZGS6EHY7X'
+          SOPS_AGE_KEY_2: 'AGE-SECRET-KEY-1XKZM3PDE0FXSQ0KZJYJ3Y4TDLCQR46PMEYHQ3Q2TW9K7MN08EWSG9HRZE'
         run: |
-          echo "extra-secret-environment-variables=SOPS_AGE_KEY=$(echo $SOPS_AGE_KEY | base64 -w0 | base64 -w0)" >> "$GITHUB_OUTPUT"
+          encoded=$(
+            {
+              echo "$SOPS_AGE_KEY_1"
+              echo "$SOPS_AGE_KEY_2"
+            } | base64 -w0 | base64 -w0
+          )
+          echo "extra-secret-environment-variables=SOPS_AGE_KEY=$encoded" >> "$GITHUB_OUTPUT"
 
   unit-skeleton-extra-secret-env:
     name: unit - skeleton / extra-secret-environment-variables

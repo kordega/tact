@@ -31,15 +31,6 @@ on:
         required: false
         default: false
         type: boolean
-      extra-environment-variables:
-        description: |
-          Newline-separated list of NAME=VALUE pairs to expose as environment
-          variables for the duration of the workflow. Example:
-            TF_VAR_region=eu-west-1
-            TF_VAR_cluster_name=prod
-        required: false
-        default: ""
-        type: string
     secrets:
       aws-access-key-id:
         description: AWS Access Key ID used for authentication.
@@ -95,16 +86,6 @@ jobs:
       plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
       plan-artifact-uploaded: ${{ steps.tf-plan.outputs.plan-artifact-uploaded }}
     steps:
-      - name: Set extra environment variables
-        if: inputs.extra-environment-variables != ''
-        env:
-          ENV_VARS: ${{ inputs.extra-environment-variables }}
-        run: |
-          while IFS= read -r line; do
-            [[ -z "$line" ]] && continue
-            echo "$line" >> "$GITHUB_ENV"
-          done <<< "$ENV_VARS"
-
       - name: Decode and mask secret environment variables
         env:
           SECRET_VARS: ${{ secrets.extra-secret-environment-variables }}
@@ -153,16 +134,6 @@ jobs:
     needs:
       - tofu-plan
     steps:
-      - name: Set extra environment variables
-        if: inputs.extra-environment-variables != ''
-        env:
-          ENV_VARS: ${{ inputs.extra-environment-variables }}
-        run: |
-          while IFS= read -r line; do
-            [[ -z "$line" ]] && continue
-            echo "$line" >> "$GITHUB_ENV"
-          done <<< "$ENV_VARS"
-
       - name: Decode and mask secret environment variables
         env:
           SECRET_VARS: ${{ secrets.extra-secret-environment-variables }}
