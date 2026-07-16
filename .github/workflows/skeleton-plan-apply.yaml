@@ -41,11 +41,19 @@ on:
       cloudflare-api-token:
         description: Cloudflare API token used for DNS/infrastructure management.
         required: false
-      sops-age-key:
+      extra-secret-environment-variables:
         description: |
-          AGE private key used to decrypt SOPS-encrypted files via the sops Terraform provider.
-          When provided, the key is forwarded to the tofu-plan and tofu-apply steps so that
-          the sops provider can decrypt secrets. The key is never written to disk.
+          Newline-separated list of NAME=VALUE pairs to expose as masked environment
+          variables for the duration of the workflow. Each VALUE must be double
+          base64-encoded so it can be safely carried as a secret string. The runner
+          decodes and masks every value before any tofu step runs.
+
+          Encode a value:
+            printf '%s' "my-secret" | base64 | base64
+
+          Example secret value:
+            TF_VAR_db_password=<base64(base64(password))>
+            TF_VAR_api_key=<base64(base64(key))>
         required: false
     outputs:
       plan-has-changes:
@@ -78,6 +86,21 @@ jobs:
       plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
       plan-artifact-uploaded: ${{ steps.tf-plan.outputs.plan-artifact-uploaded }}
     steps:
+      - name: Decode and mask secret environment variables
+        env:
+          SECRET_VARS: ${{ secrets.extra-secret-environment-variables }}
+        run: |
+          while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            key="${line%%=*}"
+            value=$(printf '%s' "${line#*=}" | base64 -d | base64 -d)
+            while IFS= read -r mask_line; do
+              [[ -n "$mask_line" ]] && echo "::add-mask::${mask_line}"
+            done <<< "$value"
+            delimiter="$(openssl rand -hex 8)"
+            printf '%s<<%s\n%s\n%s\n' "$key" "$delimiter" "$value" "$delimiter" >> "$GITHUB_ENV"
+          done <<< "$SECRET_VARS"
+
       - name: Checkout the repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
 
@@ -102,7 +125,6 @@ jobs:
           environment: ${{ inputs.environment }}
           upload-artifact: 'true'
           upload-artifact-on-no-changes: ${{ inputs.upload-artifact-on-no-changes }}
-          sops-age-key: ${{ secrets.sops-age-key }}
 
   tofu-apply:
     if: needs.tofu-plan.outputs.plan-has-changes == 'true' && inputs.tofu-apply
@@ -115,6 +137,21 @@ jobs:
     needs:
       - tofu-plan
     steps:
+      - name: Decode and mask secret environment variables
+        env:
+          SECRET_VARS: ${{ secrets.extra-secret-environment-variables }}
+        run: |
+          while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            key="${line%%=*}"
+            value=$(printf '%s' "${line#*=}" | base64 -d | base64 -d)
+            while IFS= read -r mask_line; do
+              [[ -n "$mask_line" ]] && echo "::add-mask::${mask_line}"
+            done <<< "$value"
+            delimiter="$(openssl rand -hex 8)"
+            printf '%s<<%s\n%s\n%s\n' "$key" "$delimiter" "$value" "$delimiter" >> "$GITHUB_ENV"
+          done <<< "$SECRET_VARS"
+
       - name: Checkout the repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
 
@@ -137,4 +174,3 @@ jobs:
           chroot-directory: ${{ inputs.chroot-directory }}
           environment: ${{ inputs.environment }}
           plan-artifact-name: ${{ needs.tofu-plan.outputs.plan-artifact-name }}
-          sops-age-key: ${{ secrets.sops-age-key }}

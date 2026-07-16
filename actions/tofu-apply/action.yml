@@ -29,14 +29,6 @@ inputs:
       Accepts true/false. Defaults to true.
     required: false
     default: "true"
-  sops-age-key:
-    description: |
-      AGE private key used to decrypt SOPS-encrypted files via the sops Terraform provider.
-      When provided, the key is exposed as SOPS_AGE_KEY exclusively for the duration of
-      the tofu apply step so that the sops provider can decrypt secrets at apply time.
-      The key is never written to disk and is not available outside of that single step.
-    required: false
-    default: ""
 
 runs:
   using: "composite"
@@ -92,8 +84,6 @@ runs:
 
     - name: Run tofu apply
       working-directory: ${{ inputs.chroot-directory }}
-      env:
-        SOPS_AGE_KEY: ${{ inputs.sops-age-key }}
       shell: bash
       run: |
         echo "::group::Run tofu apply"

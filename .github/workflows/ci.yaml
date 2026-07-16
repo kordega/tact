@@ -269,7 +269,6 @@ jobs:
         chroot-directory:
           - plan-with-changes
           - plan-without-changes
-          - plan-with-sops
         include:
           - chroot-directory: plan-with-changes
             plan-has-changes: 'true'
@@ -277,21 +276,12 @@ jobs:
             upload-artifact: 'false'
             tofu-apply: 'true'
             tofu-destroy: 'true'
-            sops-age-key: ''
           - chroot-directory: plan-without-changes
             plan-has-changes: 'false'
             plan-add-count: '0'
             upload-artifact: 'false'
             tofu-apply: 'true'
             tofu-destroy: 'true'
-            sops-age-key: ''
-          - chroot-directory: plan-with-sops
-            plan-has-changes: 'true'
-            plan-add-count: '1'
-            upload-artifact: 'false'
-            tofu-apply: 'true'
-            tofu-destroy: 'true'
-            sops-age-key: 'AGE-SECRET-KEY-18EDM87RHYPH4DNF8V8D80DQPZLY8M08EYD0AYF42A0HJAN225ZGS6EHY7X'
     steps:
       - name: Checkout the repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
@@ -308,7 +298,6 @@ jobs:
           chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
           upload-artifact: ${{ matrix.upload-artifact }}
-          sops-age-key: ${{ matrix.sops-age-key }}
 
       - name: Assert tofu plan change counts
         shell: bash
@@ -329,7 +318,6 @@ jobs:
           chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
           plan-file-path: ${{ steps.tf-plan.outputs.plan-file-path }}
-          sops-age-key: ${{ matrix.sops-age-key }}
 
       - name: Run tofu apply with artifact
         id: tf-apply-with-artifact
@@ -339,7 +327,6 @@ jobs:
           chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
           plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
-          sops-age-key: ${{ matrix.sops-age-key }}
 
       - name: Run tofu plan for destroy test fixture
         id: tf-plan-destroy
@@ -350,7 +337,6 @@ jobs:
           environment: ${{ matrix.tofu-version }}
           tofu-destroy: '${{ matrix.tofu-destroy }}'
           upload-artifact: '${{ matrix.upload-artifact }}'
-          sops-age-key: ${{ matrix.sops-age-key }}
 
       - name: Run tofu apply for destroy test fixture
         id: tf-apply-destroy
@@ -360,7 +346,6 @@ jobs:
           chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
           environment: ${{ matrix.tofu-version }}
           plan-file-path: ${{ steps.tf-plan-destroy.outputs.plan-file-path }}
-          sops-age-key: ${{ matrix.sops-age-key }}
 
   unit-plan-init-backend:
     name: unit - tofu-plan - init-backend
@@ -579,6 +564,39 @@ jobs:
             | select(.type == "time_static" and .name == "this")
             | .instances[].attributes.rfc3339 == "2024-01-01T00:00:00Z"
           '
+
+  unit-skeleton-extra-secret-env-encode:
+    name: unit - skeleton / extra-secret-environment-variables / encode
+    runs-on: ubuntu-slim
+    outputs:
+      extra-secret-environment-variables: ${{ steps.encode.outputs.extra-secret-environment-variables }}
+    steps:
+      - name: Encode keys
+        id: encode
+        env:
+          SOPS_AGE_KEY_1: 'AGE-SECRET-KEY-18EDM87RHYPH4DNF8V8D80DQPZLY8M08EYD0AYF42A0HJAN225ZGS6EHY7X'
+          SOPS_AGE_KEY_2: 'AGE-SECRET-KEY-1TVVD90ZZAYM6ULUN5ZJX2FAJR0885UQNTADMX28WGRMY467Q3G9Q8FSM97'
+        run: |
+          encoded=$(
+            {
+              echo "$SOPS_AGE_KEY_1"
+              echo "$SOPS_AGE_KEY_2"
+            } | base64 -w0 | base64 -w0
+          )
+          echo "extra-secret-environment-variables=SOPS_AGE_KEY=$encoded" >> "$GITHUB_OUTPUT"
+
+  unit-skeleton-extra-secret-env:
+    name: unit - skeleton / extra-secret-environment-variables
+    needs:
+      - unit-skeleton-extra-secret-env-encode
+    uses: ./.github/workflows/skeleton-plan-apply.yaml
+    secrets:
+      extra-secret-environment-variables: ${{ needs.unit-skeleton-extra-secret-env-encode.outputs.extra-secret-environment-variables }}
+    with:
+      tofu-version: '1.11.5'
+      chroot-directory: test-fixtures/plan-with-sops
+      environment: unit
+      tofu-apply: true
 
   integration-plan:
     name: integration / plan
