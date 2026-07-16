@@ -109,7 +109,12 @@ runs:
       if: ${{ inputs.sops-secret != '' }}
       shell: bash
       run: |
-        echo "SOPS_AGE_KEY=${{ inputs.sops-secret }}" >> $GITHUB_ENV
+        echo "::add-mask::${{ inputs.sops-secret }}"
+        {
+          echo 'SOPS_AGE_KEY<<EOF'
+          echo '${{ inputs.sops-secret }}'
+          echo 'EOF'
+        } >> "$GITHUB_ENV"
 
     - name: Validate upload-artifact-on-no-changes input
       if: ${{ inputs.upload-artifact-on-no-changes != 'true' && inputs.upload-artifact-on-no-changes != 'false' }}
