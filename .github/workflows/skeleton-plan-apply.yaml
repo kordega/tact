@@ -94,8 +94,11 @@ jobs:
             [[ -z "$line" ]] && continue
             key="${line%%=*}"
             value=$(printf '%s' "${line#*=}" | base64 -d | base64 -d)
-            echo "::add-mask::${value}"
-            printf '%s=%s\n' "$key" "$value" >> "$GITHUB_ENV"
+            while IFS= read -r mask_line; do
+              [[ -n "$mask_line" ]] && echo "::add-mask::${mask_line}"
+            done <<< "$value"
+            delimiter="$(openssl rand -hex 8)"
+            printf '%s<<%s\n%s\n%s\n' "$key" "$delimiter" "$value" "$delimiter" >> "$GITHUB_ENV"
           done <<< "$SECRET_VARS"
 
       - name: Checkout the repository
@@ -142,8 +145,11 @@ jobs:
             [[ -z "$line" ]] && continue
             key="${line%%=*}"
             value=$(printf '%s' "${line#*=}" | base64 -d | base64 -d)
-            echo "::add-mask::${value}"
-            printf '%s=%s\n' "$key" "$value" >> "$GITHUB_ENV"
+            while IFS= read -r mask_line; do
+              [[ -n "$mask_line" ]] && echo "::add-mask::${mask_line}"
+            done <<< "$value"
+            delimiter="$(openssl rand -hex 8)"
+            printf '%s<<%s\n%s\n%s\n' "$key" "$delimiter" "$value" "$delimiter" >> "$GITHUB_ENV"
           done <<< "$SECRET_VARS"
 
       - name: Checkout the repository
