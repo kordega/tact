@@ -31,6 +31,22 @@ on:
         required: false
         default: false
         type: boolean
+    secrets:
+      aws-access-key-id:
+        description: AWS Access Key ID used for authentication.
+        required: false
+      aws-secret-access-key:
+        description: AWS Secret Access Key used for authentication.
+        required: false
+      cloudflare-api-token:
+        description: Cloudflare API token used for DNS/infrastructure management.
+        required: false
+      sops-age-key:
+        description: |
+          AGE private key used to decrypt SOPS-encrypted files via the sops Terraform provider.
+          When provided, the key is forwarded to the tofu-plan and tofu-apply steps so that
+          the sops provider can decrypt secrets. The key is never written to disk.
+        required: false
     outputs:
       plan-has-changes:
         description: Whether the generated plan contains any changes.
@@ -51,6 +67,11 @@ permissions:
 jobs:
   tofu-plan:
     runs-on: ubuntu-slim
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.aws-access-key-id }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.aws-secret-access-key }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.cloudflare-api-token }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
       plan-has-changes: ${{ steps.tf-plan.outputs.plan-has-changes }}
       plan-add-count: ${{ steps.tf-plan.outputs.plan-add-count }}
@@ -81,10 +102,16 @@ jobs:
           environment: ${{ inputs.environment }}
           upload-artifact: 'true'
           upload-artifact-on-no-changes: ${{ inputs.upload-artifact-on-no-changes }}
+          sops-age-key: ${{ secrets.sops-age-key }}
 
   tofu-apply:
     if: needs.tofu-plan.outputs.plan-has-changes == 'true' && inputs.tofu-apply
     runs-on: ubuntu-slim
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.aws-access-key-id }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.aws-secret-access-key }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.cloudflare-api-token }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     needs:
       - tofu-plan
     steps:
@@ -110,3 +137,4 @@ jobs:
           chroot-directory: ${{ inputs.chroot-directory }}
           environment: ${{ inputs.environment }}
           plan-artifact-name: ${{ needs.tofu-plan.outputs.plan-artifact-name }}
+          sops-age-key: ${{ secrets.sops-age-key }}
