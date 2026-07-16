@@ -269,7 +269,6 @@ jobs:
         chroot-directory:
           - plan-with-changes
           - plan-without-changes
-          - plan-with-sops
         include:
           - chroot-directory: plan-with-changes
             plan-has-changes: 'true'
@@ -283,15 +282,6 @@ jobs:
             upload-artifact: 'false'
             tofu-apply: 'true'
             tofu-destroy: 'true'
-          - chroot-directory: plan-with-sops
-            plan-has-changes: 'true'
-            plan-add-count: '1'
-            upload-artifact: 'false'
-            tofu-apply: 'true'
-            tofu-destroy: 'true'
-            sops-age-key: 'AGE-SECRET-KEY-18EDM87RHYPH4DNF8V8D80DQPZLY8M08EYD0AYF42A0HJAN225ZGS6EHY7X'
-    env:
-      SOPS_AGE_KEY: ${{ matrix.sops-age-key }}
     steps:
       - name: Checkout the repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
@@ -585,7 +575,7 @@ jobs:
         id: encode
         env:
           SOPS_AGE_KEY_1: 'AGE-SECRET-KEY-18EDM87RHYPH4DNF8V8D80DQPZLY8M08EYD0AYF42A0HJAN225ZGS6EHY7X'
-          SOPS_AGE_KEY_2: 'AGE-SECRET-KEY-1XKZM3PDE0FXSQ0KZJYJ3Y4TDLCQR46PMEYHQ3Q2TW9K7MN08EWSG9HRZE'
+          SOPS_AGE_KEY_2: 'AGE-SECRET-KEY-1TVVD90ZZAYM6ULUN5ZJX2FAJR0885UQNTADMX28WGRMY467Q3G9Q8FSM97'
         run: |
           encoded=$(
             {
