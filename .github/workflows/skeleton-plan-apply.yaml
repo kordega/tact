@@ -106,7 +106,6 @@ jobs:
           done <<< "$ENV_VARS"
 
       - name: Decode and mask secret environment variables
-        if: secrets.extra-secret-environment-variables != ''
         env:
           SECRET_VARS: ${{ secrets.extra-secret-environment-variables }}
         run: |
@@ -165,7 +164,6 @@ jobs:
           done <<< "$ENV_VARS"
 
       - name: Decode and mask secret environment variables
-        if: secrets.extra-secret-environment-variables != ''
         env:
           SECRET_VARS: ${{ secrets.extra-secret-environment-variables }}
         run: |
