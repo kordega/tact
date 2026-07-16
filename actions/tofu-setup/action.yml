@@ -67,7 +67,7 @@ runs:
 
     - name: Cache opentofu providers
       if: ${{ inputs.provider-cache == 'true' }}
-      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ env.TOFU_PROVIDER_CACHE_DIR }}
         key: tofu-providers-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') || 'no-lockfile' }}
@@ -75,7 +75,7 @@ runs:
           tofu-providers-${{ runner.os }}-
 
     - name: Install tofu-cli
-      uses: opentofu/setup-opentofu@9d84900f3238fab8cd84ce47d658d25dd008be2f # v1
+      uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
       with:
         github_token: ${{ inputs.github-token }}
         cli_config_credentials_hostname: ${{ inputs.cli-config-credentials-hostname }}

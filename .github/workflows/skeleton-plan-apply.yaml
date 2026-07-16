@@ -30,6 +30,11 @@ on:
         description: The SOPS decryption key to be used for decrypting SOPS secrets.
         required: false
         type: string
+      upload-artifact-on-no-changes:
+        description: Whether to upload the plan artifact when the plan has no changes.
+        required: false
+        default: false
+        type: boolean
     outputs:
       plan-has-changes:
         description: Whether the generated plan contains any changes.
@@ -40,6 +45,9 @@ on:
       plan-artifact-name:
         description: Name of the uploaded plan artifact.
         value: ${{ jobs.tofu-plan.outputs.plan-artifact-name }}
+      plan-artifact-uploaded:
+        description: Whether the plan was uploaded as a GitHub Actions artifact.
+        value: ${{ jobs.tofu-plan.outputs.plan-artifact-uploaded }}
 
 permissions:
   contents: read
@@ -51,12 +59,13 @@ jobs:
       plan-has-changes: ${{ steps.tf-plan.outputs.plan-has-changes }}
       plan-add-count: ${{ steps.tf-plan.outputs.plan-add-count }}
       plan-artifact-name: ${{ steps.tf-plan.outputs.plan-artifact-name }}
+      plan-artifact-uploaded: ${{ steps.tf-plan.outputs.plan-artifact-uploaded }}
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
 
       - name: Checkout tact
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
         with:
           repository: kordega/tact
           ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
@@ -76,6 +85,7 @@ jobs:
           environment: ${{ inputs.environment }}
           sops-secret: ${{ inputs.sops-secret }}
           upload-artifact: 'true'
+          upload-artifact-on-no-changes: ${{ inputs.upload-artifact-on-no-changes }}
 
 
   tofu-apply:
@@ -85,10 +95,10 @@ jobs:
       - tofu-plan
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
 
       - name: Checkout tact
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
         with:
           repository: kordega/tact
           ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}

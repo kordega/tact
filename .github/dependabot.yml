@@ -3,12 +3,11 @@ version: 2
 updates:
   - package-ecosystem: "github-actions"
     directories:
-      - "/.github/workflows"
-      - "/actions/*"
+      - "**/*"
     schedule:
-      interval: "weekly"
+      interval: "daily"
   - package-ecosystem: "terraform"
     directories:
-      - "/test-fixtures/*"
+      - "**/*"
     schedule:
-      interval: "weekly"
+      interval: "daily"
