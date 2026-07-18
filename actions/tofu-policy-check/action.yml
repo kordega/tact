@@ -1,0 +1,77 @@
+---
+name: tofu-policy-check
+description: Evaluate tofu configuration against rego policies using conftest
+author: Kamil Zabielski
+
+branding:
+  icon: shield
+  color: gray-dark
+
+inputs:
+  chroot-directory:
+    description: Directory to chroot into before scanning
+    required: false
+    default: "."
+  policy-directory:
+    description: |
+      Directory containing the rego policies to evaluate.
+      Defaults to every policy bundled with tact.
+      Providing a value REPLACES the bundled policies, it does not add to them.
+    required: false
+  conftest-version:
+    description: |
+      Version of conftest to install.
+      The conftest-checksum input must be updated to match whenever this changes.
+    required: false
+    default: "0.68.2"
+  conftest-checksum:
+    description: |
+      SHA256 checksum of the conftest_<version>_Linux_x86_64.tar.gz release tarball.
+      Taken from the checksums.txt published with the conftest release.
+    required: false
+    default: "e8144c6d6d2ae0260b869caa60c7c262a1f95ac63ec1e5d2fb19be452d606347"
+
+outputs:
+  status-code:
+    description: Exit code from the policy check
+    value: ${{ steps.check.outputs.status-code }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install conftest
+      shell: bash
+      env:
+        CONFTEST_VERSION: ${{ inputs.conftest-version }}
+        CONFTEST_CHECKSUM: ${{ inputs.conftest-checksum }}
+      run: |
+        set -euo pipefail
+        echo "::group::Install conftest $CONFTEST_VERSION"
+        tarball="$RUNNER_TEMP/conftest.tar.gz"
+        curl -fsSL -o "$tarball" \
+          "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz"
+        echo "${CONFTEST_CHECKSUM}  ${tarball}" | sha256sum -c -
+        tar -xzf "$tarball" -C "$RUNNER_TEMP" conftest
+        echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+        echo "::endgroup::"
+
+    - name: Run policy check
+      id: check
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      env:
+        POLICY_DIRECTORY: ${{ inputs.policy-directory || format('{0}/../../policies', github.action_path) }}
+      run: |
+        status_code=0
+        echo "::group::Run policy check"
+        # Skip dot directories to keep the .tact checkout and vendored
+        # modules under .terraform out of the scan.
+        conftest test         \
+          --combine           \
+          --no-color          \
+          --ignore '(^|/)\.[^/]+(/|$)' \
+          --policy "$POLICY_DIRECTORY" \
+          . || status_code=$?
+        echo "::endgroup::"
+        echo "status-code=$status_code" >> "$GITHUB_OUTPUT"
+        exit "$status_code"
