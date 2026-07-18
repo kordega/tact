@@ -59,6 +59,12 @@ inputs:
       Accepts true/false. Defaults to true.
     required: false
     default: "true"
+  send-to-step-summary-on-no-changes:
+    description: |
+      Whether to send the rendered plan output to the GitHub Step Summary when the plan has no changes.
+      Accepts true/false. Defaults to true.
+    required: false
+    default: "true"
 
 outputs:
   plan-file-path:
@@ -104,6 +110,13 @@ runs:
       shell: bash
       run: |
         echo "::error::upload-artifact-on-no-changes must be 'true' or 'false', got '${{ inputs.upload-artifact-on-no-changes }}'"
+        exit 1
+
+    - name: Validate send-to-step-summary-on-no-changes input
+      if: ${{ inputs.send-to-step-summary-on-no-changes != 'true' && inputs.send-to-step-summary-on-no-changes != 'false' }}
+      shell: bash
+      run: |
+        echo "::error::send-to-step-summary-on-no-changes must be 'true' or 'false', got '${{ inputs.send-to-step-summary-on-no-changes }}'"
         exit 1
 
     - name: Show tofu version
@@ -191,7 +204,7 @@ runs:
         echo "::endgroup::"
 
     - name: Add plan to step summary
-      if: ${{ inputs.send-to-step-summary == 'true' }}
+      if: ${{ inputs.send-to-step-summary == 'true' && (inputs.send-to-step-summary-on-no-changes == 'true' || steps.tf-plan.outputs.plan-has-changes == 'true') }}
       working-directory: ${{ inputs.chroot-directory }}
       shell: bash
       run: |

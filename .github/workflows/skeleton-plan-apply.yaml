@@ -31,6 +31,11 @@ on:
         required: false
         default: false
         type: boolean
+      send-to-step-summary-on-no-changes:
+        description: Whether to send the plan output to the step summary when the plan has no changes.
+        required: false
+        default: true
+        type: boolean
     secrets:
       aws-access-key-id:
         description: AWS Access Key ID used for authentication.
@@ -125,6 +130,7 @@ jobs:
           environment: ${{ inputs.environment }}
           upload-artifact: 'true'
           upload-artifact-on-no-changes: ${{ inputs.upload-artifact-on-no-changes }}
+          send-to-step-summary-on-no-changes: ${{ inputs.send-to-step-summary-on-no-changes }}
 
   tofu-apply:
     if: needs.tofu-plan.outputs.plan-has-changes == 'true' && inputs.tofu-apply
