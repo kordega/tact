@@ -232,11 +232,11 @@ jobs:
         tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
           - fmt-passed
-          - fmt-failed
+          - .fmt-failed
         include:
           - chroot-directory: fmt-passed
             status-code: '0'
-          - chroot-directory: fmt-failed
+          - chroot-directory: .fmt-failed
             status-code: '3'
     steps:
       - name: Checkout the repository

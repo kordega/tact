@@ -7,6 +7,6 @@ resource "terraform_data" "from_secret" {
 }
 
 output "sops_secret_value" {
-  value = data.sops_file.secrets.data["secret_value"]
+  value     = data.sops_file.secrets.data["secret_value"]
   sensitive = true
 }
