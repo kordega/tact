@@ -1,18 +1,14 @@
 package main
 
+import data.lib.hcl
 import rego.v1
 
 # Input is conftest --combine over the whole repository:
 # [{path, contents}, ...] with repository-relative paths.
 
-directory(path) := d if {
-	parts := split(path, "/")
-	d := concat("/", array.slice(parts, 0, count(parts) - 1))
-}
-
 terraform_blocks[d] contains block if {
 	some file in input
-	d := directory(file.path)
+	d := hcl.directory(file.path)
 	some block in object.get(file.contents, "terraform", [])
 }
 
@@ -54,14 +50,9 @@ declared_key_providers[d] contains ref if {
 	ref := sprintf("key_provider.%s.%s", [ktype, kname])
 }
 
-# hcl2json renders any expression it cannot resolve statically as "${...}".
-deref(v) := trim_suffix(trim_prefix(v, "${"), "}")
-
-set_for(collection, d) := object.get(collection, d, set())
-
 deny contains msg if {
 	some d in roots
-	count(set_for(encryption_blocks, d)) == 0
+	count(hcl.set_for(encryption_blocks, d)) == 0
 	msg := sprintf(
 		"%s: terraform.encryption block is missing, so plan files are written in plaintext",
 		[d],
@@ -70,14 +61,14 @@ deny contains msg if {
 
 deny contains msg if {
 	some d in roots
-	count(set_for(encryption_blocks, d)) > 0
-	count(set_for(plan_blocks, d)) == 0
+	count(hcl.set_for(encryption_blocks, d)) > 0
+	count(hcl.set_for(plan_blocks, d)) == 0
 	msg := sprintf("%s: terraform.encryption is declared but has no plan{} sub-block", [d])
 }
 
 deny contains msg if {
 	some d in roots
-	some p in set_for(plan_blocks, d)
+	some p in hcl.set_for(plan_blocks, d)
 	not p.method
 	msg := sprintf("%s: terraform.encryption.plan must set method", [d])
 }
@@ -86,7 +77,7 @@ deny contains msg if {
 # "${var.foo}" and is rejected: it cannot be proven statically.
 deny contains msg if {
 	some d in roots
-	some p in set_for(plan_blocks, d)
+	some p in hcl.set_for(plan_blocks, d)
 	object.get(p, "enforced", null) != true
 	msg := sprintf(
 		"%s: terraform.encryption.plan must set enforced = true (got %v)",
@@ -96,9 +87,9 @@ deny contains msg if {
 
 deny contains msg if {
 	some d in roots
-	some p in set_for(plan_blocks, d)
-	ref := deref(p.method)
-	not ref in set_for(declared_methods, d)
+	some p in hcl.set_for(plan_blocks, d)
+	ref := hcl.deref(p.method)
+	not ref in hcl.set_for(declared_methods, d)
 	msg := sprintf(
 		"%s: terraform.encryption.plan.method references %q, which is not a declared method block",
 		[d, ref],
@@ -107,12 +98,12 @@ deny contains msg if {
 
 deny contains msg if {
 	some d in roots
-	some enc in set_for(encryption_blocks, d)
+	some enc in hcl.set_for(encryption_blocks, d)
 	some mtype, by_name in object.get(enc, "method", {})
 	some mname, bodies in by_name
 	some body in bodies
-	ref := deref(object.get(body, "keys", ""))
-	not ref in set_for(declared_key_providers, d)
+	ref := hcl.deref(object.get(body, "keys", ""))
+	not ref in hcl.set_for(declared_key_providers, d)
 	msg := sprintf(
 		"%s: method.%s.%s keys references %q, which is not a declared key_provider block",
 		[d, mtype, mname, ref],
