@@ -17,6 +17,11 @@ on:
         required: false
         type: boolean
         default: true
+      run-tofu-policy-check:
+        description: Run the rego policy checks against the tofu configuration.
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -44,3 +49,20 @@ jobs:
 
       - name: Run tofu fmt
         uses: ./.tact/actions/tofu-fmt
+
+  tofu-policy-check:
+    if: inputs.run-tofu-policy-check
+    runs-on: ubuntu-slim
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
+
+      - name: Checkout tact
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
+        with:
+          repository: kordega/tact
+          ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
+          path: .tact
+
+      - name: Run tofu policy check
+        uses: ./.tact/actions/tofu-policy-check

@@ -1,4 +1,20 @@
 terraform {
+  encryption {
+    # Test fixture only.
+    key_provider "pbkdf2" "plan" {
+      passphrase = "tact-test-fixture-passphrase"
+    }
+
+    method "aes_gcm" "plan" {
+      keys = key_provider.pbkdf2.plan
+    }
+
+    plan {
+      method   = method.aes_gcm.plan
+      enforced = true
+    }
+  }
+
   backend "s3" {
     bucket = "tofu-state"
     key    = "terraform.tfstate"
