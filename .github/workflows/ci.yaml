@@ -258,6 +258,34 @@ jobs:
         if: steps.tf-fmt.outputs.status-code != matrix.status-code
         run: exit 1
 
+  unit-root-check:
+    name: unit - tofu-root-check
+    runs-on: ubuntu-slim
+    strategy:
+      matrix:
+        chroot-directory:
+          - root-check-passed
+          - root-check-failed
+        include:
+          - chroot-directory: root-check-passed
+            status-code: '0'
+          - chroot-directory: root-check-failed
+            status-code: '1'
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
+
+      - name: Run tofu-root-check
+        id: root-check
+        uses: ./actions/tofu-root-check
+        continue-on-error: true
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+
+      - name: Assert root-check status code
+        if: steps.root-check.outputs.status-code != matrix.status-code
+        run: exit 1
+
   unit-plan:
     name: unit - tofu-plan
     runs-on: ubuntu-slim
@@ -733,33 +761,17 @@ jobs:
       environment: integration
 
   integration-skeleton-static-analysis:
-    name: integration / skeleton static-analysis (${{ matrix.chroot-directory }})
+    name: integration / skeleton static-analysis
     needs:
       - integration-plan
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - chroot-directory: plan-with-changes
-          - chroot-directory: plan-without-changes
     uses: ./.github/workflows/skeleton-static-analysis.yaml
     secrets: inherit
     with:
       tofu-version: ${{ needs.integration-plan.outputs.tofu-version }}
-      chroot-directory: test-fixtures/${{ matrix.chroot-directory }}
 
-  integration-skeleton-static-analysis-version-file:
-    name: integration / skeleton static-analysis version file
-    needs:
-      - integration-plan
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - chroot-directory: plan-with-changes
-          - chroot-directory: plan-without-changes
-    uses: ./.github/workflows/skeleton-static-analysis.yaml
+  integration-skeleton-root-checks:
+    name: integration / skeleton root-checks
+    uses: ./.github/workflows/skeleton-root-checks.yaml
     secrets: inherit
     with:
-      tofu-version-file: test-fixtures/tofu-version/.tofu-version
-      chroot-directory: test-fixtures/${{ matrix.chroot-directory }}
+      chroot-directory: test-fixtures/root-check-passed
