@@ -12,17 +12,18 @@ on:
         description: Path to a file containing the opentofu version to install.
         required: false
         type: string
-      chroot-directory:
-        description: Directory to chroot into before running tofu commands.
+      run-tofu-fmt:
+        description: Run tofu fmt check.
         required: false
-        default: "."
-        type: string
+        type: boolean
+        default: true
 
 permissions:
   contents: read
 
 jobs:
   tofu-fmt:
+    if: inputs.run-tofu-fmt
     runs-on: ubuntu-slim
     steps:
       - name: Checkout the repository
@@ -43,5 +44,3 @@ jobs:
 
       - name: Run tofu fmt
         uses: ./.tact/actions/tofu-fmt
-        with:
-          chroot-directory: ${{ inputs.chroot-directory }}

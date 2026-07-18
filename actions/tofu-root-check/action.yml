@@ -1,0 +1,50 @@
+---
+name: tofu-root-check
+description: Check that a root directory contains required tofu files
+author: Kamil Zabielski
+
+branding:
+  icon: check-circle
+  color: gray-dark
+
+inputs:
+  chroot-directory:
+    description: Root directory to check
+    required: true
+  require-tofu-version-file:
+    description: Require a .tofu-version file in the root directory
+    required: false
+    default: "true"
+  require-lock-file:
+    description: Require a .terraform.lock.hcl file in the root directory
+    required: false
+    default: "true"
+
+outputs:
+  status-code:
+    description: Exit code from the root check
+    value: ${{ steps.check.outputs.status-code }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check tofu root
+      id: check
+      shell: bash
+      run: |
+        status_code=0
+        echo "::group::Check tofu root ${{ inputs.chroot-directory }}"
+
+        if [[ "${{ inputs.require-tofu-version-file }}" == "true" ]] && [ ! -f "${{ inputs.chroot-directory }}/.tofu-version" ]; then
+          echo "MISSING: ${{ inputs.chroot-directory }}/.tofu-version"
+          status_code=1
+        fi
+
+        if [[ "${{ inputs.require-lock-file }}" == "true" ]] && [ ! -f "${{ inputs.chroot-directory }}/.terraform.lock.hcl" ]; then
+          echo "MISSING: ${{ inputs.chroot-directory }}/.terraform.lock.hcl"
+          status_code=1
+        fi
+
+        echo "::endgroup::"
+        echo "status-code=$status_code" >> "$GITHUB_OUTPUT"
+        exit "$status_code"
