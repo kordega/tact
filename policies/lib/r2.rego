@@ -70,9 +70,6 @@ backend_files[d] contains file.path if {
 # than iterate.
 backend_file(d) := min(hcl.set_for(backend_files, d))
 
-resources_of_type(rtype) := {r |
-	some r in hcl.resources(input)
-	r.type == rtype
-}
+resources_of_type(rtype) := hcl.resources_of_type(input, rtype)
 
 buckets := resources_of_type("cloudflare_r2_bucket")
