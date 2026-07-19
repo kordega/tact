@@ -7,6 +7,11 @@ terraform {
   }
 
   encryption {
+    state {
+      method   = method.aes_gcm.state
+      enforced = true
+    }
+
     plan {
       method   = method.aes_gcm.plan
       enforced = true

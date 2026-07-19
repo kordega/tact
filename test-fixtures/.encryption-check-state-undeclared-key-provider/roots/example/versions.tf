@@ -16,7 +16,7 @@ terraform {
     }
 
     method "aes_gcm" "state" {
-      keys = key_provider.pbkdf2.state
+      keys = key_provider.pbkdf2.missing
     }
 
     method "aes_gcm" "plan" {
@@ -30,7 +30,7 @@ terraform {
 
     plan {
       method   = method.aes_gcm.plan
-      enforced = false
+      enforced = true
     }
   }
 }

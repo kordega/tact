@@ -319,6 +319,10 @@ jobs:
           - .encryption-check-not-enforced
           - .encryption-check-undeclared-method
           - .encryption-check-undeclared-key-provider
+          - .encryption-check-missing-state
+          - .encryption-check-state-not-enforced
+          - .encryption-check-state-undeclared-method
+          - .encryption-check-state-undeclared-key-provider
         # An exit code only says that something was denied. The finding each
         # fixture is built to provoke says that the right rule denied it, so
         # that is what gets asserted. An empty value expects a clean run.
@@ -336,9 +340,17 @@ jobs:
           - chroot-directory: .encryption-check-not-enforced
             expect-finding: 'terraform.encryption.plan must set enforced = true (got false)'
           - chroot-directory: .encryption-check-undeclared-method
-            expect-finding: 'method references "method.aes_gcm.missing"'
+            expect-finding: 'terraform.encryption.plan.method references "method.aes_gcm.missing"'
           - chroot-directory: .encryption-check-undeclared-key-provider
-            expect-finding: 'keys references "key_provider.pbkdf2.missing"'
+            expect-finding: 'method.aes_gcm.plan keys references "key_provider.pbkdf2.missing"'
+          - chroot-directory: .encryption-check-missing-state
+            expect-finding: 'terraform.encryption is declared but has no state{} sub-block'
+          - chroot-directory: .encryption-check-state-not-enforced
+            expect-finding: 'terraform.encryption.state must set enforced = true (got false)'
+          - chroot-directory: .encryption-check-state-undeclared-method
+            expect-finding: 'terraform.encryption.state.method references "method.aes_gcm.missing"'
+          - chroot-directory: .encryption-check-state-undeclared-key-provider
+            expect-finding: 'method.aes_gcm.state keys references "key_provider.pbkdf2.missing"'
     steps:
       - name: Checkout the repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
