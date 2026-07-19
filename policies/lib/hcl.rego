@@ -47,6 +47,11 @@ resources(files) := {r |
 	}
 }
 
+resources_of_type(files, rtype) := {r |
+	some r in resources(files)
+	r.type == rtype
+}
+
 address(resource) := sprintf("%s.%s", [resource.type, resource.name])
 
 # conftest reads _loc out of a finding and anchors its annotation to that file,

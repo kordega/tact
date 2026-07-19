@@ -132,6 +132,43 @@ resource_file(rtype, rname, body) := [{
 
 bucket_file(body) := resource_file("cloudflare_r2_bucket", "state", body)
 
+# Fixtures for tofu/provider/cloudflare/resource/dns/dnssec. That policy pairs
+# a zone with the resource signing it, so both have to be in the input, and the
+# pairing is by root, so both have to be in the same directory. There is no
+# backend here: a DNS root would have one, but adding it would put the two
+# encryption policies' warnings into every assertion about DNSSEC.
+zone := {
+	"account": {"id": "${var.account_id}"},
+	"name": "example.com",
+	"type": "full",
+}
+
+signer := {
+	"zone_id": "${cloudflare_zone.example.id}",
+	"status": "active",
+}
+
+dns_file(resources) := [{
+	"path": "roots/example/dns.tf",
+	"contents": {"resource": resources},
+}]
+
+# A signed zone: one cloudflare_zone and the cloudflare_zone_dnssec pointing at
+# it, with `patch` merged over the signer, which is how each test breaks
+# exactly one thing.
+signed_zone_with(patch) := dns_file({
+	"cloudflare_zone": {"example": [zone]},
+	"cloudflare_zone_dnssec": {"example": [object.union(signer, patch)]},
+})
+
+signed_zone := signed_zone_with({})
+
+# The same signer with JSON pointers such as "/status" dropped.
+signed_zone_without(pointers) := dns_file({
+	"cloudflare_zone": {"example": [zone]},
+	"cloudflare_zone_dnssec": {"example": [json.remove(signer, pointers)]},
+})
+
 bucket_with(patch) := bucket_file(object.union(bucket, patch))
 
 bucket_without(pointers) := bucket_file(json.remove(bucket, pointers))
