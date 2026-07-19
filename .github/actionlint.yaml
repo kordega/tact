@@ -1,2 +1,8 @@
 # actionlint configuration file
-# (no ignore rules are currently defined)
+paths:
+  .github/workflows/*.yaml:
+    ignore:
+      # code-quality:write is what actions/upload-code-coverage needs to reach
+      # the coverage API. actionlint validates permission scopes against a list
+      # baked into the binary, and this one is not in it yet.
+      - 'unknown permission scope "code-quality"'
