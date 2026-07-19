@@ -8,7 +8,7 @@ import rego.v1
 # [{path, contents}, ...] with repository-relative paths.
 #
 # The endpoint is what points the s3 backend at Cloudflare instead of AWS, and
-# it is the one setting the rest of the tofu-backend-r2-* policies key off. These
+# it is the one setting the rest of the tofu/backend/r2/* policies key off. These
 # rules keep it reachable over TLS, free of secrets, and statically readable.
 
 deny contains hcl.finding(r2.backend_file(d), msg) if {
@@ -35,7 +35,7 @@ deny contains hcl.finding(r2.backend_file(d), msg) if {
 
 # A backend block is evaluated before variables exist, so an endpoint written
 # as an expression never resolves. It also hides the root from every other
-# tofu-backend-r2-* policy, because R2 is recognised by the endpoint host.
+# tofu/backend/r2/* policy, because R2 is recognised by the endpoint host.
 deny contains hcl.finding(r2.backend_file(d), msg) if {
 	some d, urls in r2.endpoints
 	some url in urls

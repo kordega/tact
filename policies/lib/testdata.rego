@@ -8,8 +8,8 @@ package lib.testdata
 
 import rego.v1
 
-# The fixtures below describe real roots, so the tofu-backend-plan-encryption
-# and tofu-backend-state-encryption policies see them too. Those policies warn
+# The fixtures below describe real roots, so the tofu/backend/plan/encryption
+# and tofu/backend/state/encryption policies see them too. Those policies warn
 # rather than deny, so they no longer reach a count(deny) == 0 assertion, but a
 # fixture without a valid encryption block would still put their warnings in
 # front of anyone reading a failing test.
@@ -43,7 +43,7 @@ encryption := {
 # would carry the other one's warnings into it.
 #
 # The backend here is the bare minimum that marks a directory as a root. The
-# tofu-backend-r2-* policies have nothing to say about it because they only
+# tofu/backend/r2/* policies have nothing to say about it because they only
 # look at resource blocks and at backends that are already spelled out.
 encryption_backend := {"s3": [{"bucket": "tofu-state"}]}
 
@@ -59,7 +59,7 @@ encryption_root_with(patch) := encryption_root({
 	"encryption": [object.union(encryption, patch)],
 })
 
-# An R2 backend that passes every tofu-backend-r2-* policy.
+# An R2 backend that passes every tofu/backend/r2/* policy.
 backend := {
 	"bucket": "tofu-state",
 	"key": "roots/example/terraform.tfstate",
@@ -90,7 +90,7 @@ root_with(patch) := root(object.union(backend, patch))
 # The compliant backend with JSON pointers such as "/region" dropped.
 root_without(pointers) := root(json.remove(backend, pointers))
 
-# Fixtures for tofu-provider-version-constraint. A root there needs a backend
+# Fixtures for tofu/provider/version-constraint. A root there needs a backend
 # to be read as a root at all, and the encryption block that comes with it
 # keeps the two encryption policies quiet, so that a warn set is only ever
 # about provider versions.
@@ -114,7 +114,8 @@ provider(constraint) := {"cloudflare": {
 	"version": constraint,
 }}
 
-# An R2 bucket that passes every tofu-resource-r2-* policy.
+# An R2 bucket that passes every
+# tofu/provider/cloudflare/resource/r2/* policy.
 bucket := {
 	"account_id": "${var.account_id}",
 	"name": "tofu-state",

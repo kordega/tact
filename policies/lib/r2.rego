@@ -1,6 +1,7 @@
 # A single shared answer to "which parts of this repository are R2". Detection
-# lives here so that every tofu-backend-r2-* and tofu-resource-r2-* policy
-# agrees on what an R2 root is, and so that each policy directory can stay one
+# lives here so that every tofu/backend/r2/* and every
+# tofu/provider/cloudflare/resource/r2/* policy agrees on what an R2 root is,
+# and so that each policy directory can stay one
 # concern wide.
 package lib.r2
 
