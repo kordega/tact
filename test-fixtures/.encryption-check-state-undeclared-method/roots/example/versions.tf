@@ -24,13 +24,13 @@ terraform {
     }
 
     state {
-      method   = method.aes_gcm.state
+      method   = method.aes_gcm.missing
       enforced = true
     }
 
     plan {
       method   = method.aes_gcm.plan
-      enforced = false
+      enforced = true
     }
   }
 }

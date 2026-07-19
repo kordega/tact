@@ -23,14 +23,9 @@ terraform {
       keys = key_provider.pbkdf2.plan
     }
 
-    state {
-      method   = method.aes_gcm.state
-      enforced = true
-    }
-
     plan {
       method   = method.aes_gcm.plan
-      enforced = false
+      enforced = true
     }
   }
 }

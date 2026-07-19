@@ -9,18 +9,55 @@ package lib.testdata
 import rego.v1
 
 # The fixtures below describe real roots, so the tofu-backend-plan-encryption
-# policy sees them too. That policy warns rather than denies, so it no longer
-# reaches a count(deny) == 0 assertion, but a fixture without a valid
-# encryption block would still put its warnings in front of anyone reading a
-# failing test.
+# and tofu-backend-state-encryption policies see them too. Those policies warn
+# rather than deny, so they no longer reach a count(deny) == 0 assertion, but a
+# fixture without a valid encryption block would still put their warnings in
+# front of anyone reading a failing test.
+#
+# state and plan get their own key provider and method rather than sharing one:
+# they protect artifacts with different lifetimes, and the encryption policy
+# tests need a root where the two chains can be broken independently.
 encryption := {
-	"key_provider": {"pbkdf2": {"plan": [{"passphrase": "${var.encryption_passphrase}"}]}},
-	"method": {"aes_gcm": {"plan": [{"keys": "${key_provider.pbkdf2.plan}"}]}},
+	"key_provider": {"pbkdf2": {
+		"plan": [{"passphrase": "${var.encryption_passphrase}"}],
+		"state": [{"passphrase": "${var.encryption_passphrase}"}],
+	}},
+	"method": {"aes_gcm": {
+		"plan": [{"keys": "${key_provider.pbkdf2.plan}"}],
+		"state": [{"keys": "${key_provider.pbkdf2.state}"}],
+	}},
 	"plan": [{
 		"enforced": true,
 		"method": "${method.aes_gcm.plan}",
 	}],
+	"state": [{
+		"enforced": true,
+		"method": "${method.aes_gcm.state}",
+	}],
 }
+
+# Builders for the two encryption policies. They share package main, so a
+# root_with() in each test file would be one name defined twice, and they also
+# have to agree on what a compliant root looks like: every assertion in either
+# file reads the same warn set, and a fixture that satisfies only one policy
+# would carry the other one's warnings into it.
+#
+# The backend here is the bare minimum that marks a directory as a root. The
+# tofu-backend-r2-* policies have nothing to say about it because they only
+# look at resource blocks and at backends that are already spelled out.
+encryption_backend := {"s3": [{"bucket": "tofu-state"}]}
+
+encryption_root(terraform_body) := [{
+	"path": "roots/example/versions.tf",
+	"contents": {"terraform": [terraform_body]},
+}]
+
+# A compliant root with `patch` merged over its encryption block, which is how
+# each test breaks exactly one thing.
+encryption_root_with(patch) := encryption_root({
+	"backend": encryption_backend,
+	"encryption": [object.union(encryption, patch)],
+})
 
 # An R2 backend that passes every tofu-backend-r2-* policy.
 backend := {

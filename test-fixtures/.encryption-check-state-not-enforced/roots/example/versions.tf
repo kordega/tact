@@ -25,12 +25,12 @@ terraform {
 
     state {
       method   = method.aes_gcm.state
-      enforced = true
+      enforced = false
     }
 
     plan {
       method   = method.aes_gcm.plan
-      enforced = false
+      enforced = true
     }
   }
 }
