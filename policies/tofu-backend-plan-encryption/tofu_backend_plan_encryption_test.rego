@@ -40,13 +40,13 @@ test_module_without_backend_is_ignored if {
 test_root_detected_via_state_store if {
 	msgs := deny with input as root_with({"state_store": {"foo": [{}]}})
 	some m in msgs
-	contains(m, "terraform.encryption block is missing")
+	contains(m.msg, "terraform.encryption block is missing")
 }
 
 test_missing_encryption_is_denied if {
 	msgs := deny with input as root_with({"backend": backend})
 	some m in msgs
-	contains(m, "roots/example: terraform.encryption block is missing")
+	contains(m.msg, "roots/example: terraform.encryption block is missing")
 }
 
 test_missing_plan_sub_block_is_denied if {
@@ -58,7 +58,7 @@ test_missing_plan_sub_block_is_denied if {
 		}],
 	})
 	some m in msgs
-	contains(m, "has no plan{} sub-block")
+	contains(m.msg, "has no plan{} sub-block")
 }
 
 test_enforced_false_is_denied if {
@@ -67,13 +67,13 @@ test_enforced_false_is_denied if {
 		"method": "${method.aes_gcm.plan}",
 	}]})
 	some m in msgs
-	contains(m, "must set enforced = true")
+	contains(m.msg, "must set enforced = true")
 }
 
 test_enforced_unset_is_denied if {
 	msgs := deny with input as root_with_encryption_patch({"plan": [{"method": "${method.aes_gcm.plan}"}]})
 	some m in msgs
-	contains(m, "must set enforced = true")
+	contains(m.msg, "must set enforced = true")
 }
 
 test_enforced_from_variable_is_denied if {
@@ -82,13 +82,13 @@ test_enforced_from_variable_is_denied if {
 		"method": "${method.aes_gcm.plan}",
 	}]})
 	some m in msgs
-	contains(m, "must set enforced = true")
+	contains(m.msg, "must set enforced = true")
 }
 
 test_missing_method_attribute_is_denied if {
 	msgs := deny with input as root_with_encryption_patch({"plan": [{"enforced": true}]})
 	some m in msgs
-	contains(m, "must set method")
+	contains(m.msg, "must set method")
 }
 
 test_undeclared_method_is_denied if {
@@ -97,13 +97,13 @@ test_undeclared_method_is_denied if {
 		"method": "${method.aes_gcm.missing}",
 	}]})
 	some m in msgs
-	contains(m, "is not a declared method block")
+	contains(m.msg, "is not a declared method block")
 }
 
 test_undeclared_key_provider_is_denied if {
 	msgs := deny with input as root_with_encryption_patch({"method": {"aes_gcm": {"plan": [{"keys": "${key_provider.pbkdf2.missing}"}]}}})
 	some m in msgs
-	contains(m, "is not a declared key_provider block")
+	contains(m.msg, "is not a declared key_provider block")
 }
 
 test_split_across_files_in_one_root_is_allowed if {
@@ -146,8 +146,8 @@ test_declarations_do_not_leak_between_roots if {
 		},
 	]
 	some m in msgs
-	contains(m, "roots/two")
-	contains(m, "is not a declared method block")
+	contains(m.msg, "roots/two")
+	contains(m.msg, "is not a declared method block")
 }
 
 test_only_the_offending_root_is_reported if {
@@ -160,5 +160,5 @@ test_only_the_offending_root_is_reported if {
 	]
 	count(msgs) == 1
 	some m in msgs
-	contains(m, "roots/bad")
+	contains(m.msg, "roots/bad")
 }

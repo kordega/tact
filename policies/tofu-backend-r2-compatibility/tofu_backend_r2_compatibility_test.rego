@@ -18,20 +18,20 @@ test_every_required_true_setting_is_reported if {
 	])
 	every setting, _ in required_true_settings {
 		some m in msgs
-		contains(m, sprintf("must set %s = true", [setting]))
+		contains(m.msg, sprintf("must set %s = true", [setting]))
 	}
 }
 
 test_missing_setting_names_its_reason if {
 	msgs := deny with input as testdata.root_without(["/skip_s3_checksum"])
 	some m in msgs
-	contains(m, "must set skip_s3_checksum = true (got <unset>): R2 rejects the trailing checksum")
+	contains(m.msg, "must set skip_s3_checksum = true (got <unset>): R2 rejects the trailing checksum")
 }
 
 test_required_setting_set_to_false_is_denied if {
 	msgs := deny with input as testdata.root_with({"skip_s3_checksum": false})
 	some m in msgs
-	contains(m, "must set skip_s3_checksum = true (got false)")
+	contains(m.msg, "must set skip_s3_checksum = true (got false)")
 }
 
 # hcl2json renders `skip_s3_checksum = var.skip` as "${var.skip}": it cannot be
@@ -39,19 +39,19 @@ test_required_setting_set_to_false_is_denied if {
 test_required_setting_from_a_variable_is_denied if {
 	msgs := deny with input as testdata.root_with({"skip_s3_checksum": "${var.skip_checksum}"})
 	some m in msgs
-	contains(m, "must set skip_s3_checksum = true")
+	contains(m.msg, "must set skip_s3_checksum = true")
 }
 
 test_wrong_region_is_denied if {
 	msgs := deny with input as testdata.root_with({"region": "eu-central-1"})
 	some m in msgs
-	contains(m, "must set region = \"auto\" (got eu-central-1)")
+	contains(m.msg, "must set region = \"auto\" (got eu-central-1)")
 }
 
 test_missing_region_is_denied if {
 	msgs := deny with input as testdata.root_without(["/region"])
 	some m in msgs
-	contains(m, "must set region = \"auto\" (got <unset>)")
+	contains(m.msg, "must set region = \"auto\" (got <unset>)")
 }
 
 test_plain_aws_backend_is_ignored if {
@@ -79,7 +79,7 @@ test_only_the_offending_root_is_reported if {
 	)
 	count(msgs) == 1
 	some m in msgs
-	contains(m, "roots/bad")
+	contains(m.msg, "roots/bad")
 }
 
 # Unlike terraform.encryption, two backend blocks in one root do not merge:
@@ -99,5 +99,5 @@ test_settings_split_across_files_are_not_merged if {
 		},
 	]
 	some m in msgs
-	contains(m, "must set skip_s3_checksum = true")
+	contains(m.msg, "must set skip_s3_checksum = true")
 }

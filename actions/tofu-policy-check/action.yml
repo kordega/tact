@@ -30,11 +30,37 @@ inputs:
       Taken from the checksums.txt published with the conftest release.
     required: false
     default: "e8144c6d6d2ae0260b869caa60c7c262a1f95ac63ec1e5d2fb19be452d606347"
+  upload-artifact:
+    description: |
+      Whether to upload the conftest results as a GitHub Actions artifact.
+      Defaults to false.
+    required: false
+    default: "false"
+  artifact-name:
+    description: |
+      Name to use for the results artifact.
+      A workflow that runs this action more than once has to give each run its
+      own name, since an artifact name has to be unique within a workflow.
+      Defaults to conftest-results.
+    required: false
+    default: "conftest-results"
+  artifact-retention-days:
+    description: |
+      Number of days to retain the results artifact.
+      Defaults to 1.
+    required: false
+    default: "1"
 
 outputs:
   status-code:
     description: Exit code from the policy check
     value: ${{ steps.check.outputs.status-code }}
+  results-path:
+    description: |
+      Path to the conftest results as JSON.
+      Holds every finding with its severity, so a caller can upload it as an
+      artifact or render it further without re-running the check.
+    value: ${{ steps.check.outputs.results-path }}
 
 runs:
   using: "composite"
@@ -63,15 +89,53 @@ runs:
         POLICY_DIRECTORY: ${{ inputs.policy-directory || format('{0}/../../policies', github.action_path) }}
       run: |
         status_code=0
+        results_path="$RUNNER_TEMP/conftest-results.json"
         echo "::group::Run policy check"
+        # JSON rather than the human-readable default, so the results survive
+        # the run as one clean machine-readable report. The steps below read
+        # that file rather than the output of this one, which keeps the check
+        # itself free of any formatting and leaves its exit code untouched.
+        #
         # Skip dot directories to keep the .tact checkout and vendored
         # modules under .terraform out of the scan.
         conftest test         \
           --combine           \
           --no-color          \
+          --output json       \
           --ignore '(^|/)\.[^/]+(/|$)' \
           --policy "$POLICY_DIRECTORY" \
-          . || status_code=$?
+          . > "$results_path" || status_code=$?
         echo "::endgroup::"
         echo "status-code=$status_code" >> "$GITHUB_OUTPUT"
-        exit "$status_code"
+        echo "results-path=$results_path" >> "$GITHUB_OUTPUT"
+
+    - name: Upload results as artifact
+      if: ${{ always() && inputs.upload-artifact == 'true' && steps.check.outputs.results-path != '' }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ steps.check.outputs.results-path }}
+        retention-days: ${{ inputs.artifact-retention-days }}
+        if-no-files-found: error
+
+    # conftest renders the findings as workflow commands itself, so a deny
+    # lands on the job log and the pull request as an error and a warn as a
+    # warning without anything here reformatting them. This costs a second
+    # evaluation, since a run emits one format and the step above owes the
+    # caller a machine-readable one.
+    - name: Report policy check
+      if: ${{ always() && steps.check.outputs.results-path != '' }}
+      working-directory: ${{ inputs.chroot-directory }}
+      shell: bash
+      env:
+        POLICY_DIRECTORY: ${{ inputs.policy-directory || format('{0}/../../policies', github.action_path) }}
+        STATUS_CODE: ${{ steps.check.outputs.status-code }}
+      run: |
+        conftest test         \
+          --combine           \
+          --no-color          \
+          --output github     \
+          --ignore '(^|/)\.[^/]+(/|$)' \
+          --policy "$POLICY_DIRECTORY" \
+          . || true
+        exit "$STATUS_CODE"

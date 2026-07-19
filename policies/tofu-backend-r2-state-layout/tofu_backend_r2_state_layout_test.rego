@@ -10,19 +10,19 @@ test_compliant_layout_is_allowed if {
 test_missing_bucket_is_denied if {
 	msgs := deny with input as testdata.root_without(["/bucket"])
 	some m in msgs
-	contains(m, "roots/example: R2 backend must set bucket")
+	contains(m.msg, "roots/example: R2 backend must set bucket")
 }
 
 test_missing_key_is_denied if {
 	msgs := deny with input as testdata.root_without(["/key"])
 	some m in msgs
-	contains(m, "roots/example: R2 backend must set key")
+	contains(m.msg, "roots/example: R2 backend must set key")
 }
 
 test_empty_key_is_denied if {
 	msgs := deny with input as testdata.root_with({"key": ""})
 	some m in msgs
-	contains(m, "must set key")
+	contains(m.msg, "must set key")
 }
 
 test_two_roots_sharing_one_state_object_are_denied if {
@@ -31,8 +31,8 @@ test_two_roots_sharing_one_state_object_are_denied if {
 		testdata.root_at("roots/two/versions.tf", testdata.backend),
 	)
 	some m in msgs
-	contains(m, "\"tofu-state/roots/example/terraform.tfstate\" is claimed by more than one root")
-	contains(m, "roots/one, roots/two")
+	contains(m.msg, "\"tofu-state/roots/example/terraform.tfstate\" is claimed by more than one root")
+	contains(m.msg, "roots/one, roots/two")
 }
 
 test_the_collision_is_reported_once_for_all_roots_involved if {
@@ -45,7 +45,7 @@ test_the_collision_is_reported_once_for_all_roots_involved if {
 	)
 	count(msgs) == 1
 	some m in msgs
-	contains(m, "roots/one, roots/three, roots/two")
+	contains(m.msg, "roots/one, roots/three, roots/two")
 }
 
 test_two_roots_with_distinct_keys_are_allowed if {

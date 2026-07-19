@@ -25,7 +25,7 @@ required_true_settings := {
 
 # A literal `true` parses to a JSON boolean. Anything else - unset, false, or
 # an expression hcl2json rendered as "${...}" - cannot be proven correct here.
-deny contains msg if {
+deny contains hcl.finding(r2.backend_file(d), msg) if {
 	some d in r2.roots
 	some body in hcl.set_for(r2.backend_bodies, d)
 	some setting, reason in required_true_settings
@@ -36,7 +36,7 @@ deny contains msg if {
 	)
 }
 
-deny contains msg if {
+deny contains hcl.finding(r2.backend_file(d), msg) if {
 	some d in r2.roots
 	some body in hcl.set_for(r2.backend_bodies, d)
 	object.get(body, "region", null) != "auto"

@@ -91,3 +91,10 @@ test_resources_of_a_file_without_resources_is_empty if {
 test_address_joins_type_and_name if {
 	address({"type": "cloudflare_r2_bucket", "name": "state"}) == "cloudflare_r2_bucket.state"
 }
+
+test_finding_carries_the_message_and_the_location if {
+	finding("roots/example/versions.tf", "must set use_lockfile = true") == {
+		"msg": "must set use_lockfile = true",
+		"_loc": {"file": "roots/example/versions.tf", "line": 1},
+	}
+}

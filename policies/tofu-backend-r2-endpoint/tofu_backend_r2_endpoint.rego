@@ -11,7 +11,7 @@ import rego.v1
 # it is the one setting the rest of the tofu-backend-r2-* policies key off. These
 # rules keep it reachable over TLS, free of secrets, and statically readable.
 
-deny contains msg if {
+deny contains hcl.finding(r2.backend_file(d), msg) if {
 	some d in r2.roots
 	some url in hcl.set_for(r2.r2_endpoints, d)
 	not startswith(url, "https://")
@@ -23,7 +23,7 @@ deny contains msg if {
 
 # https://key:secret@account.r2.cloudflarestorage.com hides a credential pair
 # in a setting nobody reads as one, and it leaks into state and logs.
-deny contains msg if {
+deny contains hcl.finding(r2.backend_file(d), msg) if {
 	some d in r2.roots
 	some url in hcl.set_for(r2.r2_endpoints, d)
 	contains(regex.replace(url, "^https?://", ""), "@")
@@ -36,7 +36,7 @@ deny contains msg if {
 # A backend block is evaluated before variables exist, so an endpoint written
 # as an expression never resolves. It also hides the root from every other
 # tofu-backend-r2-* policy, because R2 is recognised by the endpoint host.
-deny contains msg if {
+deny contains hcl.finding(r2.backend_file(d), msg) if {
 	some d, urls in r2.endpoints
 	some url in urls
 	hcl.unresolved(url)

@@ -13,7 +13,7 @@ import rego.v1
 # the rename it looks like in the diff. prevent_destroy turns all of that into
 # a failed plan instead of an outage.
 
-deny contains msg if {
+deny contains hcl.finding(bucket.path, msg) if {
 	some bucket in r2.buckets
 	not lifecycle_prevents_destroy(bucket.body)
 	msg := sprintf(
@@ -30,7 +30,7 @@ lifecycle_prevents_destroy(body) if {
 # The same reasoning one level down: a bucket-lock rule is what stops an object
 # from being deleted before its retention expires, so a lock resource that is
 # declared and then disabled is worse than none, it reads as protection.
-deny contains msg if {
+deny contains hcl.finding(lock.path, msg) if {
 	some lock in r2.resources_of_type("cloudflare_r2_bucket_lock")
 	some rule in hcl.blocks(object.get(lock.body, "rules", null))
 	object.get(rule, "enabled", null) == false

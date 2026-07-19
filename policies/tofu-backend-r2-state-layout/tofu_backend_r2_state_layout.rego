@@ -12,7 +12,7 @@ import rego.v1
 # resources on every apply while both plans look clean, which is the reason
 # this policy reads the whole repository at once rather than one root at a time.
 
-deny contains msg if {
+deny contains hcl.finding(r2.backend_file(d), msg) if {
 	some d in r2.roots
 	some body in hcl.set_for(r2.backend_bodies, d)
 	some setting in {"bucket", "key"}
@@ -30,7 +30,11 @@ state_objects[location] contains d if {
 	location := sprintf("%s/%s", [bucket, key])
 }
 
-deny contains msg if {
+# The collision belongs to every root that claims the object, so there is no
+# one file it happened in. It anchors to the first of them and names the rest
+# in the message, which at least puts the finding next to one of the two
+# backends that have to change.
+deny contains hcl.finding(r2.backend_file(min(dirs)), msg) if {
 	some location, dirs in state_objects
 	count(dirs) > 1
 	msg := sprintf(
