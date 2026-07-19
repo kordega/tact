@@ -319,37 +319,56 @@ jobs:
           - .encryption-check-not-enforced
           - .encryption-check-undeclared-method
           - .encryption-check-undeclared-key-provider
+        # An exit code only says that something was denied. The finding each
+        # fixture is built to provoke says that the right rule denied it, so
+        # that is what gets asserted. An empty value expects a clean run.
         include:
           - chroot-directory: encryption-check-passed
-            status-code: '0'
+            expect-finding: ''
           - chroot-directory: encryption-check-split-files
-            status-code: '0'
+            expect-finding: ''
           - chroot-directory: encryption-check-modules-ignored
-            status-code: '0'
+            expect-finding: ''
           - chroot-directory: .encryption-check-missing-encryption
-            status-code: '1'
+            expect-finding: 'terraform.encryption block is missing'
           - chroot-directory: .encryption-check-missing-plan
-            status-code: '1'
+            expect-finding: 'terraform.encryption is declared but has no plan{} sub-block'
           - chroot-directory: .encryption-check-not-enforced
-            status-code: '1'
+            expect-finding: 'terraform.encryption.plan must set enforced = true (got false)'
           - chroot-directory: .encryption-check-undeclared-method
-            status-code: '1'
+            expect-finding: 'method references "method.aes_gcm.missing"'
           - chroot-directory: .encryption-check-undeclared-key-provider
-            status-code: '1'
+            expect-finding: 'keys references "key_provider.pbkdf2.missing"'
     steps:
       - name: Checkout the repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
 
+      # No continue-on-error: every fixture here is expected to come back
+      # clean, so the action failing the job is itself the assertion that
+      # nothing in this matrix denies.
       - name: Run tofu-policy-check
         id: policy-check
         uses: ./actions/tofu-policy-check
-        continue-on-error: true
         with:
           chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
+          upload-artifact: 'true'
+          # Artifact names have to be unique across a workflow run, and every
+          # entry in this matrix belongs to the same one.
+          artifact-name: conftest-results-${{ matrix.chroot-directory }}
 
-      - name: Assert policy-check status code
-        if: steps.policy-check.outputs.status-code != matrix.status-code
-        run: exit 1
+      - name: Assert policy findings
+        shell: bash
+        env:
+          RESULTS_PATH: ${{ steps.policy-check.outputs.results-path }}
+          EXPECT_FINDING: ${{ matrix.expect-finding }}
+        run: |
+          set -euo pipefail
+          if [ -z "$EXPECT_FINDING" ]; then
+            jq -e '[.[].warnings[]?] | length == 0' "$RESULTS_PATH" > /dev/null
+          else
+            jq -e --arg want "$EXPECT_FINDING" \
+              'any(.[].warnings[]?.msg; contains($want))' "$RESULTS_PATH" > /dev/null
+          fi
 
   unit-plan-encrypted:
     name: unit - tofu-plan produces an encrypted plan file

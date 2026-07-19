@@ -62,7 +62,7 @@ declared_key_providers[d] contains ref if {
 	ref := sprintf("key_provider.%s.%s", [ktype, kname])
 }
 
-deny contains hcl.finding(root_file(d), msg) if {
+warn contains hcl.finding(root_file(d), msg) if {
 	some d in roots
 	count(hcl.set_for(encryption_blocks, d)) == 0
 	msg := sprintf(
@@ -71,14 +71,14 @@ deny contains hcl.finding(root_file(d), msg) if {
 	)
 }
 
-deny contains hcl.finding(root_file(d), msg) if {
+warn contains hcl.finding(root_file(d), msg) if {
 	some d in roots
 	count(hcl.set_for(encryption_blocks, d)) > 0
 	count(hcl.set_for(plan_blocks, d)) == 0
 	msg := sprintf("%s: terraform.encryption is declared but has no plan{} sub-block", [d])
 }
 
-deny contains hcl.finding(root_file(d), msg) if {
+warn contains hcl.finding(root_file(d), msg) if {
 	some d in roots
 	some p in hcl.set_for(plan_blocks, d)
 	not p.method
@@ -87,7 +87,7 @@ deny contains hcl.finding(root_file(d), msg) if {
 
 # A literal `true` parses to a JSON boolean. `enforced = var.foo` arrives as
 # "${var.foo}" and is rejected: it cannot be proven statically.
-deny contains hcl.finding(root_file(d), msg) if {
+warn contains hcl.finding(root_file(d), msg) if {
 	some d in roots
 	some p in hcl.set_for(plan_blocks, d)
 	object.get(p, "enforced", null) != true
@@ -97,7 +97,7 @@ deny contains hcl.finding(root_file(d), msg) if {
 	)
 }
 
-deny contains hcl.finding(root_file(d), msg) if {
+warn contains hcl.finding(root_file(d), msg) if {
 	some d in roots
 	some p in hcl.set_for(plan_blocks, d)
 	ref := hcl.deref(p.method)
@@ -108,7 +108,7 @@ deny contains hcl.finding(root_file(d), msg) if {
 	)
 }
 
-deny contains hcl.finding(root_file(d), msg) if {
+warn contains hcl.finding(root_file(d), msg) if {
 	some d in roots
 	some enc in hcl.set_for(encryption_blocks, d)
 	some mtype, by_name in object.get(enc, "method", {})
