@@ -90,6 +90,30 @@ root_with(patch) := root(object.union(backend, patch))
 # The compliant backend with JSON pointers such as "/region" dropped.
 root_without(pointers) := root(json.remove(backend, pointers))
 
+# Fixtures for tofu-provider-version-constraint. A root there needs a backend
+# to be read as a root at all, and the encryption block that comes with it
+# keeps the two encryption policies quiet, so that a warn set is only ever
+# about provider versions.
+provider_root(required_providers) := encryption_root({
+	"backend": encryption_backend,
+	"encryption": [encryption],
+	"required_providers": [required_providers],
+})
+
+# A module is the same declaration without the backend, which is the only
+# thing that tells the two apart.
+provider_module(required_providers) := [{
+	"path": "lib/modules/example/versions.tf",
+	"contents": {"terraform": [{"required_providers": [required_providers]}]},
+}]
+
+# The documented spelling, so that the tests exercising the bare-string
+# shorthand are visibly the exception.
+provider(constraint) := {"cloudflare": {
+	"source": "cloudflare/cloudflare",
+	"version": constraint,
+}}
+
 # An R2 bucket that passes every tofu-resource-r2-* policy.
 bucket := {
 	"account_id": "${var.account_id}",
