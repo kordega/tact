@@ -14,7 +14,7 @@ import rego.v1
 # The managed r2.dev domain publishes the whole bucket read-only to anyone.
 # Cloudflare rate limits it and documents it as a development convenience, so a
 # custom domain in front of the CDN is the production answer.
-deny contains msg if {
+deny contains hcl.finding(domain.path, msg) if {
 	some domain in r2.resources_of_type("cloudflare_r2_managed_domain")
 	object.get(domain.body, "enabled", null) == true
 	msg := sprintf(
@@ -23,7 +23,7 @@ deny contains msg if {
 	)
 }
 
-deny contains msg if {
+deny contains hcl.finding(cors.path, msg) if {
 	some cors in r2.resources_of_type("cloudflare_r2_bucket_cors")
 	some rule in hcl.blocks(object.get(cors.body, "rules", null))
 	some allowed in hcl.blocks(object.get(rule, "allowed", null))
@@ -37,7 +37,7 @@ deny contains msg if {
 # A wildcard header allowlist hands the browser whatever the caller asks for,
 # including Authorization, which is how a permissive CORS rule turns into a
 # credential relay.
-deny contains msg if {
+deny contains hcl.finding(cors.path, msg) if {
 	some cors in r2.resources_of_type("cloudflare_r2_bucket_cors")
 	some rule in hcl.blocks(object.get(cors.body, "rules", null))
 	some allowed in hcl.blocks(object.get(rule, "allowed", null))

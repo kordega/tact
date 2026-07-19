@@ -14,17 +14,17 @@ test_committed_credentials_are_denied if {
 	})
 	count(msgs) == 2
 	some m in msgs
-	contains(m, "must not set access_key")
-	contains(m, "pass AWS_ACCESS_KEY_ID instead")
+	contains(m.msg, "must not set access_key")
+	contains(m.msg, "pass AWS_ACCESS_KEY_ID instead")
 	some n in msgs
-	contains(n, "must not set secret_key")
+	contains(n.msg, "must not set secret_key")
 }
 
 test_session_token_is_denied if {
 	msgs := deny with input as testdata.root_with({"token": "sts-token"})
 	some m in msgs
-	contains(m, "must not set token")
-	contains(m, "pass AWS_SESSION_TOKEN instead")
+	contains(m.msg, "must not set token")
+	contains(m.msg, "pass AWS_SESSION_TOKEN instead")
 }
 
 # An interpolation is no better: the backend cannot resolve it, so it ends up
@@ -32,7 +32,7 @@ test_session_token_is_denied if {
 test_credential_from_a_variable_is_denied if {
 	msgs := deny with input as testdata.root_with({"secret_key": "${var.r2_secret_key}"})
 	some m in msgs
-	contains(m, "must not set secret_key")
+	contains(m.msg, "must not set secret_key")
 }
 
 test_every_machine_local_setting_is_reported if {
@@ -43,14 +43,14 @@ test_every_machine_local_setting_is_reported if {
 	})
 	every setting in machine_local_settings {
 		some m in msgs
-		contains(m, sprintf("must not set %s", [setting]))
+		contains(m.msg, sprintf("must not set %s", [setting]))
 	}
 }
 
 test_machine_local_setting_names_its_reason if {
 	msgs := deny with input as testdata.root_with({"profile": "r2"})
 	some m in msgs
-	contains(m, "resolves against one developer's filesystem and is not reproducible in CI")
+	contains(m.msg, "resolves against one developer's filesystem and is not reproducible in CI")
 }
 
 test_plain_aws_backend_is_ignored if {

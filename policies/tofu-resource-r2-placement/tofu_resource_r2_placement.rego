@@ -26,7 +26,7 @@ allowed_values := {
 	"storage_class": {"InfrequentAccess", "Standard"},
 }
 
-deny contains msg if {
+deny contains hcl.finding(bucket.path, msg) if {
 	some bucket in r2.buckets
 	some argument, reason in explicit_arguments
 	object.get(bucket.body, argument, null) == null
@@ -38,7 +38,7 @@ deny contains msg if {
 
 # Only literals can be checked; hcl2json renders `location = var.location` as
 # "${var.location}", which says nothing about the value it will take.
-deny contains msg if {
+deny contains hcl.finding(bucket.path, msg) if {
 	some bucket in r2.buckets
 	some argument, allowed in allowed_values
 	value := object.get(bucket.body, argument, null)

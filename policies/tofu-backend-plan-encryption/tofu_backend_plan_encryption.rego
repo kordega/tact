@@ -18,6 +18,18 @@ roots contains d if {
 	has_state_storage(block)
 }
 
+# The files each root spells a terraform block out in. A root is a directory
+# and has no file of its own to point a finding at, so it borrows one of these.
+# Roots that split the block across files get the first by name, chosen the
+# same way every run so that one problem is not reported once per file.
+root_files[d] contains file.path if {
+	some file in input
+	d := hcl.directory(file.path)
+	some _ in object.get(file.contents, "terraform", [])
+}
+
+root_file(d) := min(hcl.set_for(root_files, d))
+
 has_state_storage(block) if object.get(block, "backend", null) != null
 
 has_state_storage(block) if object.get(block, "state_store", null) != null
@@ -50,7 +62,7 @@ declared_key_providers[d] contains ref if {
 	ref := sprintf("key_provider.%s.%s", [ktype, kname])
 }
 
-deny contains msg if {
+warn contains hcl.finding(root_file(d), msg) if {
 	some d in roots
 	count(hcl.set_for(encryption_blocks, d)) == 0
 	msg := sprintf(
@@ -59,14 +71,14 @@ deny contains msg if {
 	)
 }
 
-deny contains msg if {
+warn contains hcl.finding(root_file(d), msg) if {
 	some d in roots
 	count(hcl.set_for(encryption_blocks, d)) > 0
 	count(hcl.set_for(plan_blocks, d)) == 0
 	msg := sprintf("%s: terraform.encryption is declared but has no plan{} sub-block", [d])
 }
 
-deny contains msg if {
+warn contains hcl.finding(root_file(d), msg) if {
 	some d in roots
 	some p in hcl.set_for(plan_blocks, d)
 	not p.method
@@ -75,7 +87,7 @@ deny contains msg if {
 
 # A literal `true` parses to a JSON boolean. `enforced = var.foo` arrives as
 # "${var.foo}" and is rejected: it cannot be proven statically.
-deny contains msg if {
+warn contains hcl.finding(root_file(d), msg) if {
 	some d in roots
 	some p in hcl.set_for(plan_blocks, d)
 	object.get(p, "enforced", null) != true
@@ -85,7 +97,7 @@ deny contains msg if {
 	)
 }
 
-deny contains msg if {
+warn contains hcl.finding(root_file(d), msg) if {
 	some d in roots
 	some p in hcl.set_for(plan_blocks, d)
 	ref := hcl.deref(p.method)
@@ -96,7 +108,7 @@ deny contains msg if {
 	)
 }
 
-deny contains msg if {
+warn contains hcl.finding(root_file(d), msg) if {
 	some d in roots
 	some enc in hcl.set_for(encryption_blocks, d)
 	some mtype, by_name in object.get(enc, "method", {})

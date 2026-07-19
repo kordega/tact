@@ -10,19 +10,19 @@ test_compliant_bucket_is_allowed if {
 test_missing_lifecycle_is_denied if {
 	msgs := deny with input as testdata.bucket_without(["/lifecycle"])
 	some m in msgs
-	contains(m, "cloudflare_r2_bucket.state must declare lifecycle { prevent_destroy = true }")
+	contains(m.msg, "cloudflare_r2_bucket.state must declare lifecycle { prevent_destroy = true }")
 }
 
 test_prevent_destroy_false_is_denied if {
 	msgs := deny with input as testdata.bucket_with({"lifecycle": [{"prevent_destroy": false}]})
 	some m in msgs
-	contains(m, "must declare lifecycle { prevent_destroy = true }")
+	contains(m.msg, "must declare lifecycle { prevent_destroy = true }")
 }
 
 test_lifecycle_without_prevent_destroy_is_denied if {
 	msgs := deny with input as testdata.bucket_with({"lifecycle": [{"ignore_changes": ["${name}"]}]})
 	some m in msgs
-	contains(m, "must declare lifecycle { prevent_destroy = true }")
+	contains(m.msg, "must declare lifecycle { prevent_destroy = true }")
 }
 
 test_prevent_destroy_alongside_other_meta_arguments_is_allowed if {
@@ -41,7 +41,7 @@ test_disabled_bucket_lock_rule_is_denied if {
 		}],
 	})
 	some m in msgs
-	contains(m, "cloudflare_r2_bucket_lock.state declares a bucket lock rule with enabled = false")
+	contains(m.msg, "cloudflare_r2_bucket_lock.state declares a bucket lock rule with enabled = false")
 }
 
 test_enabled_bucket_lock_rule_is_allowed if {

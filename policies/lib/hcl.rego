@@ -48,3 +48,16 @@ resources(files) := {r |
 }
 
 address(resource) := sprintf("%s.%s", [resource.type, resource.name])
+
+# conftest reads _loc out of a finding and anchors its annotation to that file,
+# which is the difference between a comment on the pull request diff and a line
+# at the bottom of the run. The path stays in the message too, because every
+# other output format ignores _loc.
+#
+# The key is spelled _loc as of conftest 0.68.2 and loc on its main branch, so
+# raising conftest-version without revisiting this quietly drops the anchor.
+#
+# The line is always 1. hcl2json resolves the configuration into JSON and drops
+# the offsets on the way, so there is no real line to report, and an annotation
+# without one is not addressed to anywhere in the file.
+finding(path, msg) := {"msg": msg, "_loc": {"file": path, "line": 1}}

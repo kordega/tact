@@ -13,7 +13,7 @@ import rego.v1
 # R2 it comes from use_lockfile, which takes the lock through a conditional
 # write on the state object itself.
 
-deny contains msg if {
+deny contains hcl.finding(r2.backend_file(d), msg) if {
 	some d in r2.roots
 	some body in hcl.set_for(r2.backend_bodies, d)
 	object.get(body, "use_lockfile", null) != true
@@ -23,7 +23,7 @@ deny contains msg if {
 	)
 }
 
-deny contains msg if {
+deny contains hcl.finding(r2.backend_file(d), msg) if {
 	some d in r2.roots
 	some body in hcl.set_for(r2.backend_bodies, d)
 	object.get(body, "dynamodb_table", null) != null

@@ -9,8 +9,10 @@ package lib.testdata
 import rego.v1
 
 # The fixtures below describe real roots, so the tofu-backend-plan-encryption
-# policy sees them too. Without a valid encryption block a bare
-# count(deny) == 0 assertion would be reporting somebody else's rule.
+# policy sees them too. That policy warns rather than denies, so it no longer
+# reaches a count(deny) == 0 assertion, but a fixture without a valid
+# encryption block would still put its warnings in front of anyone reading a
+# failing test.
 encryption := {
 	"key_provider": {"pbkdf2": {"plan": [{"passphrase": "${var.encryption_passphrase}"}]}},
 	"method": {"aes_gcm": {"plan": [{"keys": "${key_provider.pbkdf2.plan}"}]}},

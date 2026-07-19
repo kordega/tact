@@ -76,3 +76,17 @@ test_resources_of_type_filters_by_type if {
 test_resources_of_an_absent_type_is_empty if {
 	resources_of_type("cloudflare_r2_bucket_lock") == set() with input as testdata.bucket_file(testdata.bucket)
 }
+
+test_backend_file_is_the_file_the_backend_is_declared_in if {
+	backend_file("roots/example") == "roots/example/versions.tf" with input as testdata.root(testdata.backend)
+}
+
+# A root that splits its terraform blocks across files has to resolve to one of
+# them and always the same one, otherwise a single finding is reported once per
+# file that happens to mention the backend.
+test_backend_file_picks_one_file_for_a_split_root if {
+	backend_file("roots/example") == "roots/example/backend.tf" with input as array.concat(
+		testdata.root_at("roots/example/backend.tf", testdata.backend),
+		testdata.root_at("roots/example/versions.tf", testdata.backend),
+	)
+}

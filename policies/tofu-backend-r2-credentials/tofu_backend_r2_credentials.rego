@@ -22,7 +22,7 @@ secret_settings := {
 # root unusable in CI.
 machine_local_settings := {"profile", "shared_credentials_files", "shared_config_files"}
 
-deny contains msg if {
+deny contains hcl.finding(r2.backend_file(d), msg) if {
 	some d in r2.roots
 	some body in hcl.set_for(r2.backend_bodies, d)
 	some setting, env in secret_settings
@@ -33,7 +33,7 @@ deny contains msg if {
 	)
 }
 
-deny contains msg if {
+deny contains hcl.finding(r2.backend_file(d), msg) if {
 	some d in r2.roots
 	some body in hcl.set_for(r2.backend_bodies, d)
 	some setting in machine_local_settings

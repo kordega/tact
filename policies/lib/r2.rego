@@ -53,6 +53,22 @@ backend_bodies[d] contains body if {
 	some body in hcl.set_for(s3_backends, d)
 }
 
+# The files each root spells its backend out in. A rule about a root has no
+# file of its own to point at, because a root is a directory, so it borrows the
+# one the backend is declared in.
+backend_files[d] contains file.path if {
+	some file in input
+	d := hcl.directory(file.path)
+	some block in object.get(file.contents, "terraform", [])
+	some _ in object.get(object.get(block, "backend", {}), "s3", [])
+}
+
+# One file per root, chosen the same way every run: a finding that anchored to
+# each of them in turn would report the same problem several times over. Roots
+# that split the backend across files are the reason this has to pick rather
+# than iterate.
+backend_file(d) := min(hcl.set_for(backend_files, d))
+
 resources_of_type(rtype) := {r |
 	some r in hcl.resources(input)
 	r.type == rtype
