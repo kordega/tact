@@ -258,34 +258,6 @@ jobs:
         if: steps.tf-fmt.outputs.status-code != matrix.status-code
         run: exit 1
 
-  unit-root-check:
-    name: unit - tofu-root-check
-    runs-on: ubuntu-slim
-    strategy:
-      matrix:
-        chroot-directory:
-          - root-check-passed
-          - root-check-failed
-        include:
-          - chroot-directory: root-check-passed
-            status-code: '0'
-          - chroot-directory: root-check-failed
-            status-code: '1'
-    steps:
-      - name: Checkout the repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
-
-      - name: Run tofu-root-check
-        id: root-check
-        uses: ./actions/tofu-root-check
-        continue-on-error: true
-        with:
-          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/${{ matrix.chroot-directory }}
-
-      - name: Assert root-check status code
-        if: steps.root-check.outputs.status-code != matrix.status-code
-        run: exit 1
-
   unit-policy:
     name: unit - policy unit tests
     runs-on: ubuntu-slim
@@ -897,10 +869,3 @@ jobs:
     secrets: inherit
     with:
       tofu-version: ${{ needs.integration-plan.outputs.tofu-version }}
-
-  integration-skeleton-root-checks:
-    name: integration / skeleton root-checks
-    uses: ./.github/workflows/skeleton-root-checks.yaml
-    secrets: inherit
-    with:
-      chroot-directory: test-fixtures/root-check-passed

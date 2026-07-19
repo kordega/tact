@@ -12,23 +12,132 @@
 
 ## Usage
 
-### `skeleton-root-checks.yaml`
+### `skeleton-static-analysis.yaml`
+
+Runs `tofu fmt` and the bundled rego policies over the whole repository.
 
 ```yaml
-root-checks:
-  strategy:
-    fail-fast: false
-    matrix:
-      environment:
-        - prd-tfstate
-        - prd-cloudflare-dns
-        - prd-github-organization
-      include:
-        - environment: prd-tfstate
-          require-tofu-version-file: false
-  uses: kordega/tact/.github/workflows/skeleton-root-checks.yaml@main
-  with:
-    chroot-directory: roots/${{ matrix.environment }}
-    require-tofu-version-file: ${{ matrix.require-tofu-version-file || true }}
-    require-lock-file: true
+name: Static analysis
+
+on:
+  pull_request:
+    branches: [ '**' ]
+
+permissions:
+  contents: read
+
+jobs:
+  static-analysis:
+    uses: kordega/tact/.github/workflows/skeleton-static-analysis.yaml@main
+    with:
+      tofu-version: '1.11.5'
+```
+
+### `skeleton-plan-apply.yaml`
+
+Plans on every run and applies when the plan has changes.
+
+```yaml
+name: Plan and apply
+
+on:
+  pull_request:
+    branches: [ '**' ]
+  push:
+    branches: [ 'main' ]
+
+permissions:
+  contents: read
+
+jobs:
+  plan-apply:
+    uses: kordega/tact/.github/workflows/skeleton-plan-apply.yaml@main
+    secrets: inherit
+    with:
+      tofu-version: '1.11.5'
+      chroot-directory: roots/prd-cloudflare-dns
+      environment: production
+```
+
+`environment` names the GitHub Environment the apply job runs in, so required
+reviewers configured there gate the apply.
+
+Plan without applying, for pull requests:
+
+```yaml
+jobs:
+  plan:
+    uses: kordega/tact/.github/workflows/skeleton-plan-apply.yaml@main
+    secrets: inherit
+    with:
+      tofu-version: '1.11.5'
+      chroot-directory: roots/prd-cloudflare-dns
+      environment: production
+      tofu-apply: false
+```
+
+One job per root:
+
+```yaml
+jobs:
+  plan-apply:
+    strategy:
+      fail-fast: false
+      matrix:
+        root:
+          - prd-tfstate
+          - prd-cloudflare-dns
+          - prd-github-organization
+    uses: kordega/tact/.github/workflows/skeleton-plan-apply.yaml@main
+    secrets: inherit
+    with:
+      tofu-version-file: .tofu-version
+      chroot-directory: roots/${{ matrix.root }}
+      environment: production
+```
+
+### Secrets
+
+Passed by name rather than inherited:
+
+```yaml
+jobs:
+  plan-apply:
+    uses: kordega/tact/.github/workflows/skeleton-plan-apply.yaml@main
+    secrets:
+      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      cloudflare-api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    with:
+      tofu-version: '1.11.5'
+      chroot-directory: roots/prd-cloudflare-dns
+      environment: production
+```
+
+Anything else tofu needs goes through `extra-secret-environment-variables`, a
+newline-separated list of `NAME=VALUE` pairs. Each value is double
+base64-encoded so it survives as a secret string, and every value is masked
+before any tofu step runs.
+
+```console
+$ printf '%s' "my-secret" | base64 | base64
+```
+
+Store the encoded pairs as a single repository secret:
+
+```text
+TF_VAR_db_password=<base64(base64(password))>
+TF_VAR_api_key=<base64(base64(key))>
+```
+
+```yaml
+jobs:
+  plan-apply:
+    uses: kordega/tact/.github/workflows/skeleton-plan-apply.yaml@main
+    secrets:
+      extra-secret-environment-variables: ${{ secrets.TOFU_SECRET_ENV }}
+    with:
+      tofu-version: '1.11.5'
+      chroot-directory: roots/prd-cloudflare-dns
+      environment: production
 ```
