@@ -172,3 +172,57 @@ signed_zone_without(pointers) := dns_file({
 bucket_with(patch) := bucket_file(object.union(bucket, patch))
 
 bucket_without(pointers) := bucket_file(json.remove(bucket, pointers))
+
+# Fixtures for tofu/provider/cloudflare/resource/zone/tls. In provider v5 each
+# zone setting is its own resource carrying one setting_id and its value, so a
+# fixture is a single such resource and each test names the pair it exercises.
+zone_setting(setting_id, value) := resource_file(
+	"cloudflare_zone_setting",
+	"s",
+	{
+		"zone_id": "${cloudflare_zone.example.id}",
+		"setting_id": setting_id,
+		"value": value,
+	},
+)
+
+# Fixtures for tofu/provider/cloudflare/resource/api-token/scope. A token holds
+# a list of policy statements; the tests vary one statement's effect and the
+# resources map it grants.
+api_token(effect, resources) := resource_file(
+	"cloudflare_api_token",
+	"ci",
+	{
+		"name": "ci",
+		"policies": [{
+			"effect": effect,
+			"permission_groups": [{"id": "${var.dns_edit}"}],
+			"resources": resources,
+		}],
+	},
+)
+
+# Fixtures for tofu/provider/cloudflare/resource/zero-trust/access-open. An
+# access policy admits whoever its include matchers name; the compliant base
+# admits one email domain, and each test merges a patch that breaks one thing.
+access_policy_base := {
+	"name": "internal",
+	"decision": "allow",
+	"include": [{"email_domain": {"domain": "example.com"}}],
+}
+
+access_policy(body) := resource_file("cloudflare_zero_trust_access_policy", "p", body)
+
+access_policy_with(patch) := access_policy(object.union(access_policy_base, patch))
+
+# Fixtures for tofu/provider/cloudflare/resource/zero-trust/access-cors. The
+# tests vary the cors_headers object on an access application.
+access_app_cors(cors) := resource_file(
+	"cloudflare_zero_trust_access_application",
+	"app",
+	{
+		"name": "internal",
+		"domain": "app.example.com",
+		"cors_headers": cors,
+	},
+)
