@@ -8,8 +8,8 @@ package lib.testdata
 
 import rego.v1
 
-# The fixtures below describe real roots, so the tofu/backend/plan/encryption
-# and tofu/backend/state/encryption policies see them too. Those policies warn
+# The fixtures below describe real roots, so the tofu/backend/encryption
+# policies see them too. Those policies warn
 # rather than deny, so they no longer reach a count(deny) == 0 assertion, but a
 # fixture without a valid encryption block would still put their warnings in
 # front of anyone reading a failing test.

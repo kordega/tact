@@ -5,9 +5,9 @@ import data.lib.hcl
 import rego.v1
 
 # Reading the terraform.encryption block lives in data.lib.encryption, shared
-# with tofu/backend/state/encryption. This file is only the argument about plan
-# files: a plan is an artifact that leaves the runner, so an unencrypted one
-# hands every value it resolved to whatever ends up storing it.
+# with state_encryption.rego next to it. This file is only the argument about
+# plan files: a plan is an artifact that leaves the runner, so an unencrypted
+# one hands every value it resolved to whatever ends up storing it.
 
 plan_blocks(d) := encryption.sub_blocks(d, "plan")
 

@@ -5,8 +5,8 @@ import data.lib.hcl
 import rego.v1
 
 # Reading the terraform.encryption block lives in data.lib.encryption, shared
-# with tofu/backend/plan/encryption. This file is only the argument about state
-# files: state outlives every run and holds the resolved value of everything
+# with plan_encryption.rego next to it. This file is only the argument about
+# state files: state outlives every run and holds the resolved value of everything
 # the configuration ever touched, so an unencrypted one is a standing copy of
 # those secrets in the bucket, readable by anyone who can read the bucket.
 
