@@ -226,3 +226,18 @@ access_app_cors(cors) := resource_file(
 		"cors_headers": cors,
 	},
 )
+
+# Fixtures for tofu/provider/cloudflare/resource/dns/spf. That policy reads the
+# content of TXT records, so the base is one cloudflare_dns_record and each test
+# supplies the content string it exercises. dns_record takes a whole body so the
+# non-TXT and unresolved cases can vary type and content too.
+dns_record(body) := [{
+	"path": "roots/example/dns.tf",
+	"contents": {"resource": {"cloudflare_dns_record": {"spf": [body]}}},
+}]
+
+spf_txt(content) := dns_record({
+	"type": "TXT",
+	"name": "example.com",
+	"content": content,
+})
