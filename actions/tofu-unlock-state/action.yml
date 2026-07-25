@@ -9,11 +9,14 @@ branding:
 
 inputs:
   chroot-directory:
-    description: Directory to chroot into before running tofu force-unlock
+    description: |
+      Directory to chroot into before running tofu force-unlock.
+      Defaults to the current directory.
     required: false
     default: "."
   lock-id:
-    description: The lock ID to unlock
+    description: |
+      The lock ID to unlock.
     required: true
 
 runs:
