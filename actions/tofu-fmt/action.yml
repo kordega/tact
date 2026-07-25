@@ -9,13 +9,16 @@ branding:
 
 inputs:
   chroot-directory:
-    description: Directory to chroot into before running tofu fmt
+    description: |
+      Directory to chroot into before running tofu fmt.
+      Defaults to the current directory.
     required: false
     default: "."
 
 outputs:
   status-code:
-    description: Exit code from tofu fmt
+    description: |
+      Exit code from tofu fmt.
     value: ${{ steps.tf-fmt.outputs.status-code }}
 
 runs:
