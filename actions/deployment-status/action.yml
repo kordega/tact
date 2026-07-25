@@ -1,0 +1,97 @@
+---
+name: deployment-status
+description: Create a GitHub deployment for an environment and set its status
+author: Kamil Zabielski
+
+branding:
+  icon: flag
+  color: gray-dark
+
+inputs:
+  environment:
+    description: |
+      Name of the GitHub environment the deployment targets.
+    required: true
+  state:
+    description: |
+      State to set on the deployment.
+      One of error, failure, inactive, in_progress, queued, pending, success.
+    required: true
+  ref:
+    description: |
+      Git ref the deployment points at.
+      Defaults to the head commit of the pull request when one triggered the
+      workflow, otherwise the commit that triggered the workflow.
+    required: false
+    default: ""
+  deployment-id:
+    description: |
+      Identifier of an existing deployment to set the status on.
+      When empty, a new deployment is created.
+    required: false
+    default: ""
+  description:
+    description: |
+      Free-form description attached to the deployment status.
+    required: false
+    default: ""
+
+outputs:
+  deployment-id:
+    description: |
+      Identifier of the deployment the status was set on.
+    value: ${{ steps.deployment.outputs.deployment-id }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validate state input
+      if: ${{ !contains(fromJSON('["error", "failure", "inactive", "in_progress", "queued", "pending", "success"]'), inputs.state) }}
+      shell: bash
+      run: |
+        echo "::error::state must be one of error, failure, inactive, in_progress, queued, pending, success, got '${{ inputs.state }}'"
+        exit 1
+
+    - name: Create deployment
+      id: deployment
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        DEPLOYMENT_ID: ${{ inputs.deployment-id }}
+        ENVIRONMENT: ${{ inputs.environment }}
+        REF: ${{ inputs.ref != '' && inputs.ref || (github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha) }}
+      run: |
+        if [[ -n "$DEPLOYMENT_ID" ]]; then
+          echo "deployment-id=$DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        echo "::group::Create deployment"
+        # auto_merge is off so the API never tries to merge the default
+        # branch into the ref, and required_contexts is empty so the
+        # deployment does not wait for commit statuses that this repository
+        # does not use.
+        deployment_id="$(jq -n \
+          --arg ref "$REF" \
+          --arg environment "$ENVIRONMENT" \
+          '{ref: $ref, environment: $environment, auto_merge: false, required_contexts: []}' \
+          | gh api "repos/${GITHUB_REPOSITORY}/deployments" --input - --jq '.id')"
+        echo "deployment-id=${deployment_id}" >> "$GITHUB_OUTPUT"
+        echo "::endgroup::"
+
+    - name: Set deployment status
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        DEPLOYMENT_ID: ${{ steps.deployment.outputs.deployment-id }}
+        STATE: ${{ inputs.state }}
+        DESCRIPTION: ${{ inputs.description }}
+      run: |
+        echo "::group::Set deployment status"
+        jq -n \
+          --arg state "$STATE" \
+          --arg description "$DESCRIPTION" \
+          --arg log_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+          '{state: $state, description: $description, log_url: $log_url}' \
+          | gh api "repos/${GITHUB_REPOSITORY}/deployments/${DEPLOYMENT_ID}/statuses" --input - > /dev/null
+        echo "::endgroup::"

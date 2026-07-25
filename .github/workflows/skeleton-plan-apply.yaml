@@ -33,6 +33,15 @@ on:
         required: false
         default: true
         type: boolean
+      deployment-status:
+        description: |
+          Toggle to record a GitHub deployment with an inactive status after
+          a successful plan on a pull request. Requires the caller to grant
+          deployments write permission.
+          Defaults to true.
+        required: false
+        default: true
+        type: boolean
       upload-artifact-on-no-changes:
         description: |
           Whether to upload the plan artifact when the plan has no changes.
@@ -78,9 +87,15 @@ on:
         description: |
           Whether the plan was uploaded as a GitHub Actions artifact.
         value: ${{ jobs.tofu-plan.outputs.plan-artifact-uploaded }}
+      deployment-id:
+        description: |
+          Identifier of the GitHub deployment recorded for the environment
+          on a pull request.
+        value: ${{ jobs.deployment-status.outputs.deployment-id }}
 
 permissions:
   contents: read
+  deployments: write
 
 jobs:
   tofu-plan:
@@ -180,3 +195,37 @@ jobs:
           chroot-directory: ${{ inputs.chroot-directory }}
           environment: ${{ inputs.environment }}
           plan-artifact-name: ${{ needs.tofu-plan.outputs.plan-artifact-name }}
+
+  # A pull request only plans, so nothing marks the environment as touched.
+  # This records a deployment with an inactive status once the plan succeeds,
+  # so the environment shows what is waiting to be applied. The apply job runs
+  # inside the GitHub environment, so the push that applies the plan gets its
+  # deployment marked active by GitHub itself.
+  #
+  # A pull request from a fork runs with a read-only token, which cannot
+  # create deployments, so the job does not run for one.
+  deployment-status:
+    if: >-
+      github.event_name == 'pull_request' &&
+      inputs.deployment-status &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-slim
+    needs:
+      - tofu-plan
+    outputs:
+      deployment-id: ${{ steps.deployment.outputs.deployment-id }}
+    steps:
+      - name: Checkout tact
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: kordega/tact
+          ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
+          path: .tact
+
+      - name: Record inactive deployment
+        id: deployment
+        uses: ./.tact/actions/deployment-status
+        with:
+          environment: ${{ inputs.environment }}
+          state: inactive
+          description: Plan for ${{ inputs.chroot-directory }} awaiting apply

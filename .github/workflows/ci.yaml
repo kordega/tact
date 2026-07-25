@@ -756,6 +756,70 @@ jobs:
             | .instances[].attributes.rfc3339 == "2024-01-01T00:00:00Z"
           '
 
+  # A pull request from a fork runs with a read-only token, which cannot
+  # create deployments, so the job does not run for one.
+  unit-deployment-status:
+    name: unit - deployment-status
+    runs-on: ubuntu-slim
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Record inactive deployment
+        id: deployment-inactive
+        uses: ./actions/deployment-status
+        with:
+          environment: unit
+          state: inactive
+
+      - name: Assert deployment status is inactive
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          state="$(gh api \
+            "repos/${{ github.repository }}/deployments/${{ steps.deployment-inactive.outputs.deployment-id }}/statuses" \
+            --jq '.[0].state')"
+          [ "$state" = "inactive" ]
+
+      - name: Set success status on the existing deployment
+        id: deployment-success
+        uses: ./actions/deployment-status
+        with:
+          environment: unit
+          state: success
+          deployment-id: ${{ steps.deployment-inactive.outputs.deployment-id }}
+
+      - name: Assert the same deployment moved to success
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [ "${{ steps.deployment-success.outputs.deployment-id }}" = "${{ steps.deployment-inactive.outputs.deployment-id }}" ]
+          state="$(gh api \
+            "repos/${{ github.repository }}/deployments/${{ steps.deployment-inactive.outputs.deployment-id }}/statuses" \
+            --jq '.[0].state')"
+          [ "$state" = "success" ]
+
+      - name: Assert invalid state is rejected
+        id: deployment-invalid
+        continue-on-error: true
+        uses: ./actions/deployment-status
+        with:
+          environment: unit
+          state: not-a-state
+
+      - name: Assert invalid state failed the action
+        if: steps.deployment-invalid.outcome != 'failure'
+        shell: bash
+        run: exit 1
+
   unit-skeleton-extra-secret-env-encode:
     name: unit - skeleton / extra-secret-environment-variables / encode
     runs-on: ubuntu-slim
@@ -780,6 +844,9 @@ jobs:
     name: unit - skeleton / extra-secret-environment-variables
     needs:
       - unit-skeleton-extra-secret-env-encode
+    permissions:
+      contents: read
+      deployments: write
     uses: ./.github/workflows/skeleton-plan-apply.yaml
     secrets:
       extra-secret-environment-variables: ${{ needs.unit-skeleton-extra-secret-env-encode.outputs.extra-secret-environment-variables }}
@@ -881,6 +948,9 @@ jobs:
         include:
           - chroot-directory: plan-with-changes
           - chroot-directory: plan-without-changes
+    permissions:
+      contents: read
+      deployments: write
     uses: ./.github/workflows/skeleton-plan-apply.yaml
     secrets: inherit
     with:
@@ -898,6 +968,9 @@ jobs:
         include:
           - chroot-directory: plan-with-changes
           - chroot-directory: plan-without-changes
+    permissions:
+      contents: read
+      deployments: write
     uses: ./.github/workflows/skeleton-plan-apply.yaml
     secrets: inherit
     with:
@@ -916,6 +989,9 @@ jobs:
         include:
           - chroot-directory: plan-with-changes
           - chroot-directory: plan-without-changes
+    permissions:
+      contents: read
+      deployments: write
     uses: ./.github/workflows/skeleton-plan-apply.yaml
     secrets: inherit
     with:
