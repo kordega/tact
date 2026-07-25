@@ -5,20 +5,26 @@ on:
   workflow_call:
     inputs:
       tofu-version:
-        description: Version of opentofu to install.
+        description: |
+          Version of opentofu to install.
         required: false
         type: string
       tofu-version-file:
-        description: Path to a file containing the opentofu version to install.
+        description: |
+          Path to a file containing the opentofu version to install.
         required: false
         type: string
       run-tofu-fmt:
-        description: Run tofu fmt check.
+        description: |
+          Run tofu fmt check.
+          Defaults to true.
         required: false
         type: boolean
         default: true
       run-tofu-policy-check:
-        description: Run the rego policy checks against the tofu configuration.
+        description: |
+          Run the rego policy checks against the tofu configuration.
+          Defaults to true.
         required: false
         type: boolean
         default: true
@@ -32,10 +38,10 @@ jobs:
     runs-on: ubuntu-slim
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
 
       - name: Checkout tact
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
         with:
           repository: kordega/tact
           ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}
@@ -55,10 +61,10 @@ jobs:
     runs-on: ubuntu-slim
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
 
       - name: Checkout tact
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
         with:
           repository: kordega/tact
           ref: ${{ github.repository == 'kordega/tact' && github.ref || 'main' }}

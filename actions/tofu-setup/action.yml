@@ -10,7 +10,7 @@ branding:
 inputs:
   cli-config-credentials-hostname:
     description: |
-      The hostname of a Terraform Cloud/Enterprise instance to place within the credentials block of the OpenTofu CLI configuration file. 
+      The hostname of a Terraform Cloud/Enterprise instance to place within the credentials block of the OpenTofu CLI configuration file.
       Defaults to app.terraform.io.
     required: false
   cli-config-credentials-token:
@@ -19,33 +19,33 @@ inputs:
     required: false
   tofu-version:
     description: |
-      The version of tofu-cli to install
+      The version of tofu-cli to install.
     required: false
   tofu-version-file:
     description: |
-      Path to a file containing the OpenTofu version to install. 
-      Supported version syntax is the same as for the tofu-version input. 
+      Path to a file containing the OpenTofu version to install.
+      Supported version syntax is the same as for the tofu-version input.
       Takes precedence over tofu-version if both are provided.
     required: false
   tofu-wrapper:
     description: |
-      Whether to install a wrapper to wrap subsequent calls of the tofu binary and expose its STDOUT, STDERR, and exit code as outputs named stdout, stderr, and exitcode respectively. 
-      Defaults to true.
+      Whether to install a wrapper to wrap subsequent calls of the tofu binary and expose its STDOUT, STDERR, and exit code as outputs named stdout, stderr, and exitcode respectively.
+      Accepts true/false. Defaults to true.
     required: false
   cache:
     description: |
-      Whether to use GitHub Actions tool-cache to store and reuse downloaded OpenTofu binaries. 
-      Defaults to false.
+      Whether to use GitHub Actions tool-cache to store and reuse downloaded OpenTofu binaries.
+      Accepts true/false. Defaults to false.
     required: false
   provider-cache:
     description: |
       Whether to cache OpenTofu providers and registry metadata between workflow runs.
-      Defaults to true.
+      Accepts true/false. Defaults to true.
     required: false
     default: "true"
   github-token:
     description: |
-      Override the GitHub token read from the environment variable. 
+      Override the GitHub token read from the environment variable.
       Defaults to the value of the GITHUB_TOKEN environment variable unless running on Forgejo or Gitea.
     required: false
 
