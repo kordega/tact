@@ -5,53 +5,66 @@ on:
   workflow_call:
     inputs:
       tofu-version:
-        description: Version of opentofu to install.
+        description: |
+          Version of opentofu to install.
         required: false
         type: string
       tofu-version-file:
-        description: Path to a file containing the OpenTofu version to install.
+        description: |
+          Path to a file containing the OpenTofu version to install.
         required: false
         type: string
       environment:
-        description: Name of the tofu environment used for planning/applying.
+        description: |
+          Name of the tofu environment used for planning/applying.
         required: true
         type: string
       chroot-directory:
-        description: Directory to chroot into before running tofu commands.
+        description: |
+          Directory to chroot into before running tofu commands.
+          Defaults to the current directory.
         required: false
         default: "."
         type: string
       tofu-apply:
-        description: Toggle to run the tofu apply step.
+        description: |
+          Toggle to run the tofu apply step.
+          Defaults to true.
         required: false
         default: true
         type: boolean
       upload-artifact-on-no-changes:
-        description: Whether to upload the plan artifact when the plan has no changes.
+        description: |
+          Whether to upload the plan artifact when the plan has no changes.
+          Defaults to false.
         required: false
         default: false
         type: boolean
       send-to-step-summary-on-no-changes:
-        description: Whether to send the plan output to the step summary when the plan has no changes.
+        description: |
+          Whether to send the plan output to the step summary when the plan has no changes.
+          Defaults to true.
         required: false
         default: true
         type: boolean
     secrets:
       aws-access-key-id:
-        description: AWS Access Key ID used for authentication.
+        description: |
+          AWS Access Key ID used for authentication.
         required: false
       aws-secret-access-key:
-        description: AWS Secret Access Key used for authentication.
+        description: |
+          AWS Secret Access Key used for authentication.
         required: false
       cloudflare-api-token:
-        description: Cloudflare API token used for DNS/infrastructure management.
+        description: |
+          Cloudflare API token used for DNS/infrastructure management.
         required: false
       extra-secret-environment-variables:
         description: |
-          Newline-separated list of NAME=VALUE pairs to expose as masked environment
-          variables for the duration of the workflow. Each VALUE must be double
-          base64-encoded so it can be safely carried as a secret string. The runner
-          decodes and masks every value before any tofu step runs.
+          Newline-separated list of NAME=VALUE pairs to expose as masked environment variables for the duration of the workflow.
+          Each VALUE must be double base64-encoded so it can be safely carried as a secret string.
+          The runner decodes and masks every value before any tofu step runs.
 
           Encode a value:
             printf '%s' "my-secret" | base64 | base64
@@ -62,16 +75,20 @@ on:
         required: false
     outputs:
       plan-has-changes:
-        description: Whether the generated plan contains any changes.
+        description: |
+          Whether the generated plan contains any changes.
         value: ${{ jobs.tofu-plan.outputs.plan-has-changes }}
       plan-add-count:
-        description: Number of resources the plan will add.
+        description: |
+          Number of resources the plan will add.
         value: ${{ jobs.tofu-plan.outputs.plan-add-count }}
       plan-artifact-name:
-        description: Name of the uploaded plan artifact.
+        description: |
+          Name of the uploaded plan artifact.
         value: ${{ jobs.tofu-plan.outputs.plan-artifact-name }}
       plan-artifact-uploaded:
-        description: Whether the plan was uploaded as a GitHub Actions artifact.
+        description: |
+          Whether the plan was uploaded as a GitHub Actions artifact.
         value: ${{ jobs.tofu-plan.outputs.plan-artifact-uploaded }}
 
 permissions:

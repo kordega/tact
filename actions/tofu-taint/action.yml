@@ -9,16 +9,19 @@ branding:
 
 inputs:
   chroot-directory:
-    description: Directory to chroot into before running tofu taint
+    description: |
+      Directory to chroot into before running tofu taint.
+      Defaults to the current directory.
     required: false
     default: "."
   address:
-    description: The address of the resource to taint
+    description: |
+      The address of the resource to taint.
     required: true
   allow-missing:
     description: |
       If specified, the command will succeed even if the resource is missing.
-      Defaults to false.
+      Accepts true/false. Defaults to false.
     required: false
     default: "false"
 

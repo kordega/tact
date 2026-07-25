@@ -9,7 +9,9 @@ branding:
 
 inputs:
   chroot-directory:
-    description: Directory to chroot into before scanning
+    description: |
+      Directory to chroot into before scanning.
+      Defaults to the current directory.
     required: false
     default: "."
   policy-directory:
@@ -33,14 +35,13 @@ inputs:
   upload-artifact:
     description: |
       Whether to upload the conftest results as a GitHub Actions artifact.
-      Defaults to false.
+      Accepts true/false. Defaults to false.
     required: false
     default: "false"
   artifact-name:
     description: |
       Name to use for the results artifact.
-      A workflow that runs this action more than once has to give each run its
-      own name, since an artifact name has to be unique within a workflow.
+      A workflow that runs this action more than once has to give each run its own name, since an artifact name has to be unique within a workflow.
       Defaults to conftest-results.
     required: false
     default: "conftest-results"
@@ -53,13 +54,13 @@ inputs:
 
 outputs:
   status-code:
-    description: Exit code from the policy check
+    description: |
+      Exit code from the policy check.
     value: ${{ steps.check.outputs.status-code }}
   results-path:
     description: |
       Path to the conftest results as JSON.
-      Holds every finding with its severity, so a caller can upload it as an
-      artifact or render it further without re-running the check.
+      Holds every finding with its severity, so a caller can upload it as an artifact or render it further without re-running the check.
     value: ${{ steps.check.outputs.results-path }}
 
 runs:

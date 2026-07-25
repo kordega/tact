@@ -9,36 +9,38 @@ branding:
 
 inputs:
   chroot-directory:
-    description: Directory to chroot into before running tofu plan
+    description: |
+      Directory to chroot into before running tofu plan.
+      Defaults to the current directory.
     required: false
     default: "."
   environment:
     description: |
-      The name of the tf environment to use when running tofu plan. 
+      The name of the tf environment to use when running tofu plan.
       If not provided, the default environment will be used.
     required: true
   tofu-refresh:
     description: |
-      Whether to refresh the state before running tofu plan. 
-      Defaults to true.
+      Whether to refresh the state before running tofu plan.
+      Accepts true/false. Defaults to true.
     required: false
     default: "true"
   tofu-destroy:
     description: |
-      Whether to run tofu plan with the -destroy flag. 
-      Defaults to false.
+      Whether to run tofu plan with the -destroy flag.
+      Accepts true/false. Defaults to false.
     required: false
     default: "false"
   plan-retention-days:
     description: |
-      Number of days to retain the generated tf plan file. 
+      Number of days to retain the generated tf plan file.
       Defaults to 1.
     required: false
     default: "1"
   upload-artifact:
     description: |
-      Whether to upload the generated tf plan file as a GitHub Actions artifact. 
-      Defaults to true.
+      Whether to upload the generated tf plan file as a GitHub Actions artifact.
+      Accepts true/false. Defaults to true.
     required: false
     default: "true"
   upload-artifact-on-no-changes:
@@ -68,31 +70,41 @@ inputs:
 
 outputs:
   plan-file-path:
-    description: The path to the generated tf-plan file.
+    description: |
+      The path to the generated tf-plan file.
     value: ${{ steps.tf-plan.outputs.plan-file-path }}
   plan-artifact-name:
-    description: The name to use for the tf plan artifact (used when upload-artifact is true).
+    description: |
+      The name to use for the tf plan artifact (used when upload-artifact is true).
     value: ${{ steps.tf-plan.outputs.plan-artifact-name }}
   plan-has-changes:
-    description: Whether the generated tf plan contains changes. Will be true if the plan contains any changes, including those that require no action, and false if the plan is empty and contains no changes.
+    description: |
+      Whether the generated tf plan contains changes.
+      Will be true if the plan contains any changes, including those that require no action, and false if the plan is empty and contains no changes.
     value: ${{ steps.tf-plan.outputs.plan-has-changes }}
   plan-add-count:
-    description: Number of resources the plan will add.
+    description: |
+      Number of resources the plan will add.
     value: ${{ steps.tf-plan.outputs.plan-add-count }}
   plan-change-count:
-    description: Number of resources the plan will change in-place.
+    description: |
+      Number of resources the plan will change in-place.
     value: ${{ steps.tf-plan.outputs.plan-change-count }}
   plan-destroy-count:
-    description: Number of resources the plan will destroy.
+    description: |
+      Number of resources the plan will destroy.
     value: ${{ steps.tf-plan.outputs.plan-destroy-count }}
   plan-import-count:
-    description: Number of resources the plan will import.
+    description: |
+      Number of resources the plan will import.
     value: ${{ steps.tf-plan.outputs.plan-import-count }}
   plan-replace-count:
-    description: Number of resources the plan will replace.
+    description: |
+      Number of resources the plan will replace.
     value: ${{ steps.tf-plan.outputs.plan-replace-count }}
   plan-artifact-uploaded:
-    description: Whether the tf plan was uploaded as a GitHub Actions artifact.
+    description: |
+      Whether the tf plan was uploaded as a GitHub Actions artifact.
     value: ${{ steps.artifact-uploaded.outputs.plan-artifact-uploaded }}
 
 runs:

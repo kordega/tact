@@ -829,7 +829,7 @@ jobs:
   integration-apply-with-artifact:
     name: integration / apply with artifact
     runs-on: ubuntu-slim
-    needs: 
+    needs:
       - integration-plan
     steps:
       - name: Checkout the repository

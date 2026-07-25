@@ -5,20 +5,26 @@ on:
   workflow_call:
     inputs:
       tofu-version:
-        description: Version of opentofu to install.
+        description: |
+          Version of opentofu to install.
         required: false
         type: string
       tofu-version-file:
-        description: Path to a file containing the opentofu version to install.
+        description: |
+          Path to a file containing the opentofu version to install.
         required: false
         type: string
       run-tofu-fmt:
-        description: Run tofu fmt check.
+        description: |
+          Run tofu fmt check.
+          Defaults to true.
         required: false
         type: boolean
         default: true
       run-tofu-policy-check:
-        description: Run the rego policy checks against the tofu configuration.
+        description: |
+          Run the rego policy checks against the tofu configuration.
+          Defaults to true.
         required: false
         type: boolean
         default: true
