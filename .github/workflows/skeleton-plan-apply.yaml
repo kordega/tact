@@ -37,15 +37,6 @@ on:
         default: true
         type: boolean
     secrets:
-      aws-access-key-id:
-        description: AWS Access Key ID used for authentication.
-        required: false
-      aws-secret-access-key:
-        description: AWS Secret Access Key used for authentication.
-        required: false
-      cloudflare-api-token:
-        description: Cloudflare API token used for DNS/infrastructure management.
-        required: false
       extra-secret-environment-variables:
         description: |
           Newline-separated list of NAME=VALUE pairs to expose as masked environment
@@ -81,9 +72,6 @@ jobs:
   tofu-plan:
     runs-on: ubuntu-slim
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.aws-access-key-id }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.aws-secret-access-key }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.cloudflare-api-token }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
       plan-has-changes: ${{ steps.tf-plan.outputs.plan-has-changes }}
@@ -137,9 +125,6 @@ jobs:
     runs-on: ubuntu-slim
     environment: ${{ inputs.environment }}
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.aws-access-key-id }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.aws-secret-access-key }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.cloudflare-api-token }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     needs:
       - tofu-plan

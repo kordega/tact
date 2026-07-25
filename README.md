@@ -98,23 +98,7 @@ jobs:
 
 ### Secrets
 
-Passed by name rather than inherited:
-
-```yaml
-jobs:
-  plan-apply:
-    uses: kordega/tact/.github/workflows/skeleton-plan-apply.yaml@main
-    secrets:
-      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      cloudflare-api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-    with:
-      tofu-version: '1.11.5'
-      chroot-directory: roots/prd-cloudflare-dns
-      environment: production
-```
-
-Anything else tofu needs goes through `extra-secret-environment-variables`, a
+Everything tofu needs goes through `extra-secret-environment-variables`, a
 newline-separated list of `NAME=VALUE` pairs. Each value is double
 base64-encoded so it survives as a secret string, and every value is masked
 before any tofu step runs.
