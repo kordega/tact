@@ -90,7 +90,7 @@ root_with(patch) := root(object.union(backend, patch))
 # The compliant backend with JSON pointers such as "/region" dropped.
 root_without(pointers) := root(json.remove(backend, pointers))
 
-# Fixtures for tofu/provider/version-constraint. A root there needs a backend
+# Fixtures for tofu/version-constraint. A root there needs a backend
 # to be read as a root at all, and the encryption block that comes with it
 # keeps the two encryption policies quiet, so that a warn set is only ever
 # about provider versions.
