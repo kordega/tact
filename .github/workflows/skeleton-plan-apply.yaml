@@ -47,6 +47,89 @@ on:
         required: false
         default: true
         type: boolean
+      tofu-telemetry-enabled:
+        description: |
+          Whether to export OpenTelemetry traces from the tofu commands.
+          Requires tofu-telemetry-endpoint.
+          Defaults to false.
+        required: false
+        default: false
+        type: boolean
+      tofu-telemetry-endpoint:
+        description: |
+          Base OTLP endpoint the traces are exported to, such as a Jaeger collector on http://jaeger.internal:4317.
+          Required when tofu-telemetry-enabled is true.
+        required: false
+        default: ""
+        type: string
+      tofu-telemetry-exporter:
+        description: |
+          Exporter used for traces.
+          OpenTofu only implements otlp, any other value disables the export.
+          Defaults to otlp.
+        required: false
+        default: "otlp"
+        type: string
+      tofu-telemetry-protocol:
+        description: |
+          OTLP transport protocol used to export traces.
+          Accepts grpc, http/protobuf or http/json.
+          Left unset by default, which the exporter treats as http/protobuf.
+          Set it to grpc when tofu-telemetry-endpoint points at an OTLP gRPC port such as 4317.
+        required: false
+        default: ""
+        type: string
+      tofu-telemetry-insecure:
+        description: |
+          Whether to export traces over a plaintext connection instead of TLS.
+          Defaults to false.
+        required: false
+        default: false
+        type: boolean
+      tofu-telemetry-service-name:
+        description: |
+          Service name reported on the exported traces.
+          Defaults to tofu-<environment>, so each environment shows up as its own service in the collector.
+        required: false
+        default: ""
+        type: string
+      workflow-telemetry-enabled:
+        description: |
+          Whether to export OpenTelemetry traces and metrics for the workflow run itself, covering the jobs and steps of this skeleton rather than the tofu commands inside them.
+          Requires workflow-telemetry-endpoint.
+          The run is read back from the GitHub API with the token the caller granted, so a private repository needs the calling workflow to grant actions: read.
+          Defaults to false.
+        required: false
+        default: false
+        type: boolean
+      workflow-telemetry-endpoint:
+        description: |
+          Base OTLP endpoint the workflow traces and metrics are exported to, such as https://otlp-gateway-prod-eu-west-6.grafana.net/otlp.
+          Required when workflow-telemetry-enabled is true.
+        required: false
+        default: ""
+        type: string
+      workflow-telemetry-protocol:
+        description: |
+          OTLP transport protocol used to export the workflow telemetry.
+          Accepts grpc, http/protobuf or http/json. Defaults to http/protobuf, which is what the OTLP gateways of the hosted backends expect.
+        required: false
+        default: "http/protobuf"
+        type: string
+      workflow-telemetry-service-name:
+        description: |
+          Service name reported on the exported workflow telemetry.
+          Defaults to github-actions.
+        required: false
+        default: "github-actions"
+        type: string
+      workflow-telemetry-resource-attributes:
+        description: |
+          Comma-separated list of KEY=VALUE resource attributes attached to the exported workflow telemetry, such as environment=ci,team=platform.
+          Empty by default.
+        required: false
+        default: ""
+        type: string
     secrets:
       extra-secret-environment-variables:
         description: |
@@ -60,6 +143,13 @@ on:
           Example secret value:
             TF_VAR_db_password=<base64(base64(password))>
             TF_VAR_api_key=<base64(base64(key))>
+        required: false
+      workflow-telemetry-headers:
+        description: |
+          Comma-separated list of KEY=VALUE headers sent with the workflow telemetry export, which is where a backend behind authentication reads its credentials from.
+
+          Example for a Grafana Cloud OTLP gateway:
+            Authorization=Basic <base64(instance-id:token)>
         required: false
     outputs:
       plan-has-changes:
@@ -79,12 +169,17 @@ on:
           Whether the plan was uploaded as a GitHub Actions artifact.
         value: ${{ jobs.tofu-plan.outputs.plan-artifact-uploaded }}
 
-permissions:
-  contents: read
+# Permissions are pinned per job rather than for the whole workflow. A called
+# workflow may not request a scope the caller withheld, and that is rejected
+# when the run is parsed rather than when the job runs — so a workflow-level
+# grant here would break every caller that narrows its own permissions, even
+# for jobs their inputs leave switched off.
 
 jobs:
   tofu-plan:
     runs-on: ubuntu-slim
+    permissions:
+      contents: read
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
@@ -123,6 +218,12 @@ jobs:
         with:
           tofu-version: ${{ inputs.tofu-version }}
           tofu-version-file: ${{ inputs.tofu-version-file }}
+          telemetry-enabled: ${{ inputs.tofu-telemetry-enabled }}
+          telemetry-endpoint: ${{ inputs.tofu-telemetry-endpoint }}
+          telemetry-exporter: ${{ inputs.tofu-telemetry-exporter }}
+          telemetry-protocol: ${{ inputs.tofu-telemetry-protocol }}
+          telemetry-insecure: ${{ inputs.tofu-telemetry-insecure }}
+          telemetry-service-name: ${{ inputs.tofu-telemetry-service-name || format('tofu-{0}', inputs.environment) }}
 
       - name: Run tofu plan
         id: tf-plan
@@ -138,6 +239,8 @@ jobs:
     if: needs.tofu-plan.outputs.plan-has-changes == 'true' && inputs.tofu-apply
     runs-on: ubuntu-slim
     environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     needs:
@@ -173,6 +276,12 @@ jobs:
         with:
           tofu-version: ${{ inputs.tofu-version }}
           tofu-version-file: ${{ inputs.tofu-version-file }}
+          telemetry-enabled: ${{ inputs.tofu-telemetry-enabled }}
+          telemetry-endpoint: ${{ inputs.tofu-telemetry-endpoint }}
+          telemetry-exporter: ${{ inputs.tofu-telemetry-exporter }}
+          telemetry-protocol: ${{ inputs.tofu-telemetry-protocol }}
+          telemetry-insecure: ${{ inputs.tofu-telemetry-insecure }}
+          telemetry-service-name: ${{ inputs.tofu-telemetry-service-name || format('tofu-{0}', inputs.environment) }}
 
       - name: Run tofu apply
         uses: ./.tact/actions/tofu-apply
@@ -180,3 +289,34 @@ jobs:
           chroot-directory: ${{ inputs.chroot-directory }}
           environment: ${{ inputs.environment }}
           plan-artifact-name: ${{ needs.tofu-plan.outputs.plan-artifact-name }}
+
+  # The action reads the run back from the API, so it has to be the last job of
+  # the run rather than a step inside one. always() keeps it reporting the runs
+  # worth looking at: the ones where plan or apply failed, and the ones where
+  # apply was skipped because the plan held no changes.
+  # No permissions block: the job takes what the caller granted. Naming
+  # actions: read here would be a request, and a caller that withheld it fails
+  # the whole run rather than this job.
+  workflow-telemetry:
+    if: ${{ always() && inputs.workflow-telemetry-enabled }}
+    runs-on: ubuntu-slim
+    needs:
+      - tofu-plan
+      - tofu-apply
+    steps:
+      - name: Validate workflow-telemetry-endpoint input
+        if: ${{ inputs.workflow-telemetry-endpoint == '' }}
+        run: |
+          echo "::error::workflow-telemetry-endpoint must be provided when workflow-telemetry-enabled is 'true'"
+          exit 1
+
+      - name: Send workflow telemetry
+        uses: paper2/github-actions-opentelemetry@f7ea8331cf2167431503ed5b0218299d09c19986 # v0.10.2
+        env:
+          OTEL_SERVICE_NAME: ${{ inputs.workflow-telemetry-service-name }}
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ inputs.workflow-telemetry-endpoint }}
+          OTEL_EXPORTER_OTLP_PROTOCOL: ${{ inputs.workflow-telemetry-protocol }}
+          OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.workflow-telemetry-headers }}
+          OTEL_RESOURCE_ATTRIBUTES: ${{ inputs.workflow-telemetry-resource-attributes }}
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
