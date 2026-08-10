@@ -32,16 +32,17 @@ jobs:
     runs-on: ubuntu-slim
     outputs:
       releases: ${{ steps.read-releases.outputs.releases }}
-      releases-with-lockfile: ${{ steps.read-releases.outputs.releases-with-lockfile }}
+      latest-release: ${{ steps.read-releases.outputs.latest-release }}
     steps:
       - name: Restore cached releases
         id: cache-releases
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .cache/tofu-releases.json
-          key: tofu-releases-v1
-          restore-keys: |
-            tofu-releases-
+          # v2 narrowed the list to the supported minors. No restore-keys: a
+          # prefix fallback is what would hand back the v1 entry and put the
+          # unsupported minors back into every matrix.
+          key: tofu-releases-v2
 
       - name: Fetch releases if cache missed
         id: get-tofu-releases
@@ -49,11 +50,15 @@ jobs:
         shell: bash
         run: |
           mkdir -p .cache
+          # 1.10 is the floor: it is the first release that implements
+          # OpenTelemetry tracing and the state lock file, both of which the
+          # actions rely on.
           releases="$(curl -s 'https://api.github.com/repos/opentofu/opentofu/releases' | jq -c '
             map(select(.prerelease == false)) |
             map(.tag_name | sub("^v";"")) |
             map(select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))) |
             map(split(".") | {major:(.[0]|tonumber), minor:(.[1]|tonumber), patch:(.[2]|tonumber), ver:(.[0]+"."+.[1]+"."+.[2])}) |
+            map(select(.major * 100 + .minor >= 110)) |
             sort_by(.major,.minor,.patch) |
             group_by(.major,.minor) |
             map(last.ver)
@@ -67,8 +72,8 @@ jobs:
           releases="$(cat .cache/tofu-releases.json)"
           echo "$releases"
           echo "releases=$releases" >> "$GITHUB_OUTPUT"
-          releases_with_lockfile="$(echo "$releases" | jq -c 'map(select(split(".") | (.[0]|tonumber) * 100 + (.[1]|tonumber) >= 110))')"
-          echo "releases-with-lockfile=$releases_with_lockfile" >> "$GITHUB_OUTPUT"
+          # Sorted ascending, so the last entry is the newest minor.
+          echo "latest-release=$(echo "$releases" | jq -r '.[-1]')" >> "$GITHUB_OUTPUT"
 
   unit-setup:
     name: unit - tofu-setup
@@ -143,6 +148,68 @@ jobs:
           echo "::endgroup::"
           exit "$status"
 
+  unit-setup-telemetry:
+    name: unit - tofu-setup telemetry variables
+    runs-on: ubuntu-slim
+    needs:
+      - get-tofu-releases
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Only the variable export is under test here, so the endpoint points at
+      # nothing. Nothing connects to it: tofu is never run in this job.
+      - name: Run tofu setup with every telemetry input
+        uses: ./actions/tofu-setup
+        with:
+          tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases)[0] }}
+          telemetry-enabled: 'true'
+          telemetry-endpoint: http://127.0.0.1:4317
+          telemetry-exporter: otlp
+          telemetry-protocol: http/protobuf
+          telemetry-insecure: 'true'
+          telemetry-service-name: tofu-unit
+
+      - name: Assert opentelemetry variables are exported
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "$OTEL_TRACES_EXPORTER" = "otlp" ]
+          [ "$OTEL_EXPORTER_OTLP_ENDPOINT" = "http://127.0.0.1:4317" ]
+          [ "$OTEL_EXPORTER_OTLP_PROTOCOL" = "http/protobuf" ]
+          [ "$OTEL_EXPORTER_OTLP_INSECURE" = "true" ]
+          [ "$OTEL_SERVICE_NAME" = "tofu-unit" ]
+
+  unit-setup-telemetry-disabled:
+    name: unit - tofu-setup telemetry stays opt-in
+    runs-on: ubuntu-slim
+    needs:
+      - get-tofu-releases
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # An endpoint is supplied on purpose: telemetry-enabled is the only thing
+      # that may turn the export on, so configuring a collector without it must
+      # still leave tofu silent.
+      - name: Run tofu setup with telemetry disabled
+        uses: ./actions/tofu-setup
+        with:
+          tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases)[0] }}
+          telemetry-enabled: 'false'
+          telemetry-endpoint: http://127.0.0.1:4317
+          telemetry-service-name: tofu-unit
+
+      - name: Assert no opentelemetry variables are exported
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -z "${OTEL_TRACES_EXPORTER:-}" ]
+          [ -z "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ]
+          [ -z "${OTEL_EXPORTER_OTLP_PROTOCOL:-}" ]
+          [ -z "${OTEL_EXPORTER_OTLP_INSECURE:-}" ]
+          [ -z "${OTEL_SERVICE_NAME:-}" ]
+
   unit-unlock-state:
     name: unit - tofu-unlock
     runs-on: ubuntu-latest
@@ -150,7 +217,7 @@ jobs:
       - get-tofu-releases
     strategy:
       matrix:
-        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases-with-lockfile) }}
+        tofu-version: ${{ fromJson(needs.get-tofu-releases.outputs.releases) }}
         chroot-directory:
           - unlock-state
     steps:
@@ -931,3 +998,124 @@ jobs:
     secrets: inherit
     with:
       tofu-version: ${{ needs.integration-plan.outputs.tofu-version }}
+
+  integration-telemetry-jaeger:
+    name: integration / telemetry to jaeger
+    runs-on: ubuntu-latest
+    needs:
+      - get-tofu-releases
+    strategy:
+      fail-fast: false
+      # Only the newest minor: what this asserts is that the action reaches a
+      # collector, and every supported minor exports over the same protocol.
+      # The version matrix on unit-setup already covers the rest.
+      matrix:
+        # tofu builds its exporter with otel autoexport, whose protocol default
+        # is http/protobuf rather than gRPC. So an empty protocol belongs with
+        # Jaeger's HTTP port on 4318, and 4317 only works when gRPC is asked
+        # for by name. Pairing them the other way exports into a port that
+        # cannot decode it, which is silent: tofu still exits 0.
+        protocol:
+          - default
+          - grpc
+        include:
+          - protocol: default
+            telemetry-protocol: ''
+            telemetry-port: '4318'
+          - protocol: grpc
+            telemetry-protocol: grpc
+            telemetry-port: '4317'
+    env:
+      JAEGER_QUERY_URL: http://127.0.0.1:16686
+      SERVICE_NAME: tofu-ci-${{ matrix.protocol }}
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Jaeger v2, which is the image OpenTofu documents this feature against.
+      # It serves OTLP on 4317/4318 out of the box, so no collector env needed.
+      - name: Start Jaeger
+        shell: bash
+        run: |
+          docker run -d --name jaeger \
+            -p 4317:4317 \
+            -p 4318:4318 \
+            -p 16686:16686 \
+            jaegertracing/jaeger:2.5.0
+          for _ in $(seq 1 30); do
+            curl -sf "$JAEGER_QUERY_URL/api/services" > /dev/null && break
+            sleep 1
+          done
+
+      - name: Run tofu setup with telemetry
+        uses: ./actions/tofu-setup
+        with:
+          tofu-version: ${{ needs.get-tofu-releases.outputs.latest-release }}
+          telemetry-enabled: 'true'
+          telemetry-endpoint: http://127.0.0.1:${{ matrix.telemetry-port }}
+          telemetry-protocol: ${{ matrix.telemetry-protocol }}
+          telemetry-insecure: 'true'
+          telemetry-service-name: ${{ env.SERVICE_NAME }}
+
+      # An empty protocol has to keep the variable out of the environment
+      # rather than export it empty, which would override the exporter default.
+      - name: Assert protocol variable follows the input
+        shell: bash
+        env:
+          EXPECT_PROTOCOL: ${{ matrix.telemetry-protocol }}
+        run: |
+          set -euo pipefail
+          [ "${OTEL_EXPORTER_OTLP_PROTOCOL:-}" = "$EXPECT_PROTOCOL" ]
+          [ "$OTEL_EXPORTER_OTLP_ENDPOINT" = "http://127.0.0.1:${{ matrix.telemetry-port }}" ]
+          [ "$OTEL_SERVICE_NAME" = "$SERVICE_NAME" ]
+
+      # A fixture with a provider and a resource, so the run walks a real graph
+      # and starts a provider. An empty config would leave far less to trace.
+      - name: Run tofu plan
+        uses: ./actions/tofu-plan
+        with:
+          chroot-directory: ${{ env.TEST_FIXTURES_DIR }}/plan-with-changes
+          environment: ${{ env.SERVICE_NAME }}
+          upload-artifact: 'false'
+
+      - name: Assert jaeger received the traces
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # A search with no window is left to the server default, which has
+          # changed between Jaeger versions. Bounding it keeps the query the
+          # assertion, not the default.
+          end_us="$(( $(date +%s) * 1000000 ))"
+          start_us="$(( end_us - 3600 * 1000000 ))"
+          traces_url="$JAEGER_QUERY_URL/api/traces?service=$SERVICE_NAME&start=$start_us&end=$end_us&limit=20"
+
+          # Spans are batched and flushed as each tofu process exits, so the
+          # collector is polled rather than read once.
+          found=false
+          for _ in $(seq 1 30); do
+            if curl -sf "$traces_url" -o traces.json \
+              && jq -e '[.data[]?.spans[]?] | length > 0' traces.json > /dev/null; then
+              found=true
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$found" != "true" ]; then
+            echo "::error::no spans for $SERVICE_NAME reached jaeger"
+            echo "services jaeger knows about:"
+            curl -s "$JAEGER_QUERY_URL/api/services" || true
+            echo "last response from $traces_url:"
+            cat traces.json 2>/dev/null || echo "(no response body)"
+            exit 1
+          fi
+
+          echo "::group::Operations reported to jaeger"
+          jq -r '[.data[]?.spans[]?.operationName] | unique | .[]' traces.json
+          echo "::endgroup::"
+
+      - name: Show jaeger logs
+        if: failure()
+        shell: bash
+        run: docker logs jaeger

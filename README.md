@@ -10,6 +10,10 @@
 
 [1]: https://www.hashicorp.com/en/blog/hashicorp-adopts-business-source-license
 
+OpenTofu 1.10 is the oldest supported release. It is the first one that
+implements OpenTelemetry tracing and the state lock file, and CI is matrixed
+over 1.10 and up.
+
 ## Usage
 
 ### `skeleton-static-analysis.yaml`
@@ -125,3 +129,58 @@ jobs:
       chroot-directory: roots/prd-cloudflare-dns
       environment: production
 ```
+
+### Telemetry
+
+OpenTofu exports traces over OTLP, so any OTLP receiver works as the collector
+— Jaeger, Grafana Tempo or an OpenTelemetry Collector in front of them. Nothing
+is exported unless `telemetry-enabled` is set to `true`.
+
+```yaml
+jobs:
+  plan-apply:
+    uses: kordega/tact/.github/workflows/skeleton-plan-apply.yaml@main
+    secrets: inherit
+    with:
+      tofu-version: '1.11.5'
+      chroot-directory: roots/prd-cloudflare-dns
+      environment: production
+      telemetry-enabled: true
+      telemetry-endpoint: http://jaeger.internal:4318
+      telemetry-insecure: true
+```
+
+Traces are reported under `tofu-<environment>`, so the run above shows up in
+Jaeger as the service `tofu-production`. Override it with
+`telemetry-service-name` when one environment spans several roots and each
+needs its own service.
+
+> [!IMPORTANT]
+> The port has to match the protocol. OpenTofu defaults to `http/protobuf`,
+> which Jaeger serves on `4318`. Pointing at the gRPC port `4317` without
+> setting `telemetry-protocol: grpc` exports into a port that cannot decode
+> the request, and tofu still exits `0` — the traces just never arrive.
+
+```yaml
+    with:
+      telemetry-enabled: true
+      telemetry-endpoint: http://jaeger.internal:4317
+      telemetry-protocol: grpc
+      telemetry-insecure: true
+```
+
+The inputs map onto the standard OpenTelemetry environment variables, which
+`tofu-setup` exports for every tofu command that follows in the job:
+
+| Input                    | Environment variable           |
+| ------------------------ | ------------------------------ |
+| `telemetry-exporter`     | `OTEL_TRACES_EXPORTER`         |
+| `telemetry-endpoint`     | `OTEL_EXPORTER_OTLP_ENDPOINT`  |
+| `telemetry-protocol`     | `OTEL_EXPORTER_OTLP_PROTOCOL`  |
+| `telemetry-insecure`     | `OTEL_EXPORTER_OTLP_INSECURE`  |
+| `telemetry-service-name` | `OTEL_SERVICE_NAME`            |
+
+`telemetry-insecure: true` sends traces in plaintext, so keep it for collectors
+reachable only over a private network. A collector behind authentication reads
+its credentials from `OTEL_EXPORTER_OTLP_HEADERS`, which belongs in
+`extra-secret-environment-variables` rather than in a workflow input.

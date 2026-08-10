@@ -48,10 +48,100 @@ inputs:
       Override the GitHub token read from the environment variable.
       Defaults to the value of the GITHUB_TOKEN environment variable unless running on Forgejo or Gitea.
     required: false
+  telemetry-enabled:
+    description: |
+      Whether to export OpenTelemetry traces from every subsequent tofu command in the job.
+      Requires telemetry-endpoint.
+      Accepts true/false. Defaults to false.
+    required: false
+    default: "false"
+  telemetry-endpoint:
+    description: |
+      Base OTLP endpoint the traces are exported to, such as a Jaeger collector on http://jaeger.internal:4317.
+      Exported as OTEL_EXPORTER_OTLP_ENDPOINT.
+      Required when telemetry-enabled is true.
+    required: false
+    default: ""
+  telemetry-exporter:
+    description: |
+      Exporter used for traces.
+      Exported as OTEL_TRACES_EXPORTER. OpenTofu only implements otlp, any other value disables the export.
+      Defaults to otlp.
+    required: false
+    default: "otlp"
+  telemetry-protocol:
+    description: |
+      OTLP transport protocol used to export traces.
+      Exported as OTEL_EXPORTER_OTLP_PROTOCOL. Accepts grpc, http/protobuf or http/json.
+      Left unset by default, which the exporter treats as http/protobuf.
+      Set it to grpc when telemetry-endpoint points at an OTLP gRPC port such as 4317.
+    required: false
+    default: ""
+  telemetry-insecure:
+    description: |
+      Whether to export traces over a plaintext connection instead of TLS.
+      Exported as OTEL_EXPORTER_OTLP_INSECURE. Accepts true/false. Defaults to false.
+    required: false
+    default: "false"
+  telemetry-service-name:
+    description: |
+      Service name reported on the exported traces.
+      Exported as OTEL_SERVICE_NAME. Defaults to the OpenTofu built-in name, "OpenTofu CLI".
+    required: false
+    default: ""
 
 runs:
   using: "composite"
   steps:
+    - name: Validate telemetry-enabled input
+      if: ${{ inputs.telemetry-enabled != 'true' && inputs.telemetry-enabled != 'false' }}
+      shell: bash
+      env:
+        TELEMETRY_ENABLED: ${{ inputs.telemetry-enabled }}
+      run: |
+        echo "::error::telemetry-enabled must be 'true' or 'false', got '$TELEMETRY_ENABLED'"
+        exit 1
+
+    - name: Validate telemetry-insecure input
+      if: ${{ inputs.telemetry-insecure != 'true' && inputs.telemetry-insecure != 'false' }}
+      shell: bash
+      env:
+        TELEMETRY_INSECURE: ${{ inputs.telemetry-insecure }}
+      run: |
+        echo "::error::telemetry-insecure must be 'true' or 'false', got '$TELEMETRY_INSECURE'"
+        exit 1
+
+    - name: Validate telemetry-endpoint input
+      if: ${{ inputs.telemetry-enabled == 'true' && inputs.telemetry-endpoint == '' }}
+      shell: bash
+      run: |
+        echo "::error::telemetry-endpoint must be provided when telemetry-enabled is 'true'"
+        exit 1
+
+    - name: Configure opentelemetry tracing
+      if: ${{ inputs.telemetry-enabled == 'true' }}
+      shell: bash
+      env:
+        TELEMETRY_ENDPOINT: ${{ inputs.telemetry-endpoint }}
+        TELEMETRY_EXPORTER: ${{ inputs.telemetry-exporter }}
+        TELEMETRY_PROTOCOL: ${{ inputs.telemetry-protocol }}
+        TELEMETRY_INSECURE: ${{ inputs.telemetry-insecure }}
+        TELEMETRY_SERVICE_NAME: ${{ inputs.telemetry-service-name }}
+      run: |
+        {
+          echo "OTEL_TRACES_EXPORTER=$TELEMETRY_EXPORTER"
+          echo "OTEL_EXPORTER_OTLP_ENDPOINT=$TELEMETRY_ENDPOINT"
+          echo "OTEL_EXPORTER_OTLP_INSECURE=$TELEMETRY_INSECURE"
+        } >> "$GITHUB_ENV"
+
+        if [[ -n "$TELEMETRY_PROTOCOL" ]]; then
+          echo "OTEL_EXPORTER_OTLP_PROTOCOL=$TELEMETRY_PROTOCOL" >> "$GITHUB_ENV"
+        fi
+
+        if [[ -n "$TELEMETRY_SERVICE_NAME" ]]; then
+          echo "OTEL_SERVICE_NAME=$TELEMETRY_SERVICE_NAME" >> "$GITHUB_ENV"
+        fi
+
     - name: Prepare provider cache directory
       if: ${{ inputs.provider-cache == 'true' }}
       shell: bash

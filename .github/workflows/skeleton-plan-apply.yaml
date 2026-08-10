@@ -47,6 +47,52 @@ on:
         required: false
         default: true
         type: boolean
+      telemetry-enabled:
+        description: |
+          Whether to export OpenTelemetry traces from the tofu commands.
+          Requires telemetry-endpoint.
+          Defaults to false.
+        required: false
+        default: false
+        type: boolean
+      telemetry-endpoint:
+        description: |
+          Base OTLP endpoint the traces are exported to, such as a Jaeger collector on http://jaeger.internal:4317.
+          Required when telemetry-enabled is true.
+        required: false
+        default: ""
+        type: string
+      telemetry-exporter:
+        description: |
+          Exporter used for traces.
+          OpenTofu only implements otlp, any other value disables the export.
+          Defaults to otlp.
+        required: false
+        default: "otlp"
+        type: string
+      telemetry-protocol:
+        description: |
+          OTLP transport protocol used to export traces.
+          Accepts grpc, http/protobuf or http/json.
+          Left unset by default, which the exporter treats as http/protobuf.
+          Set it to grpc when telemetry-endpoint points at an OTLP gRPC port such as 4317.
+        required: false
+        default: ""
+        type: string
+      telemetry-insecure:
+        description: |
+          Whether to export traces over a plaintext connection instead of TLS.
+          Defaults to false.
+        required: false
+        default: false
+        type: boolean
+      telemetry-service-name:
+        description: |
+          Service name reported on the exported traces.
+          Defaults to tofu-<environment>, so each environment shows up as its own service in the collector.
+        required: false
+        default: ""
+        type: string
     secrets:
       extra-secret-environment-variables:
         description: |
@@ -123,6 +169,12 @@ jobs:
         with:
           tofu-version: ${{ inputs.tofu-version }}
           tofu-version-file: ${{ inputs.tofu-version-file }}
+          telemetry-enabled: ${{ inputs.telemetry-enabled }}
+          telemetry-endpoint: ${{ inputs.telemetry-endpoint }}
+          telemetry-exporter: ${{ inputs.telemetry-exporter }}
+          telemetry-protocol: ${{ inputs.telemetry-protocol }}
+          telemetry-insecure: ${{ inputs.telemetry-insecure }}
+          telemetry-service-name: ${{ inputs.telemetry-service-name || format('tofu-{0}', inputs.environment) }}
 
       - name: Run tofu plan
         id: tf-plan
@@ -173,6 +225,12 @@ jobs:
         with:
           tofu-version: ${{ inputs.tofu-version }}
           tofu-version-file: ${{ inputs.tofu-version-file }}
+          telemetry-enabled: ${{ inputs.telemetry-enabled }}
+          telemetry-endpoint: ${{ inputs.telemetry-endpoint }}
+          telemetry-exporter: ${{ inputs.telemetry-exporter }}
+          telemetry-protocol: ${{ inputs.telemetry-protocol }}
+          telemetry-insecure: ${{ inputs.telemetry-insecure }}
+          telemetry-service-name: ${{ inputs.telemetry-service-name || format('tofu-{0}', inputs.environment) }}
 
       - name: Run tofu apply
         uses: ./.tact/actions/tofu-apply
