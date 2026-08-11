@@ -6,14 +6,14 @@ import rego.v1
 test_ssl_off_is_denied if {
 	msgs := deny with input as testdata.zone_setting("ssl", "off")
 	some m in msgs
-	contains(m.msg, "cloudflare_zone_setting.s sets ssl = \"off\"")
+	contains(m.msg, "cloudflare_zone_setting.example sets ssl = \"off\"")
 	contains(m.msg, "cleartext")
 }
 
 test_ssl_flexible_is_denied if {
 	msgs := deny with input as testdata.zone_setting("ssl", "flexible")
 	some m in msgs
-	contains(m.msg, "cloudflare_zone_setting.s sets ssl = \"flexible\"")
+	contains(m.msg, "cloudflare_zone_setting.example sets ssl = \"flexible\"")
 }
 
 test_ssl_full_is_warned_about if {

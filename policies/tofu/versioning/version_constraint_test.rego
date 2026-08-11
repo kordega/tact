@@ -97,6 +97,20 @@ test_each_provider_is_checked_independently if {
 	contains(m.msg, "github")
 }
 
+# A root is whatever owns the state, backend{} or state_store{}. Reading only
+# backend{} left a state_store root looking like a module, which turned the
+# pin every root is asked for into the pin no module may have.
+test_a_state_store_root_is_read_as_a_root_not_a_module if {
+	count(warn) == 0 with input as testdata.provider_state_store_root(testdata.provider("~> 5.0"))
+}
+
+test_a_state_store_root_is_still_asked_for_a_pin if {
+	msgs := warn with input as testdata.provider_state_store_root(testdata.provider(">= 5.0.0"))
+	count(msgs) == 1
+	some m in msgs
+	contains(m.msg, "a root must use ~>")
+}
+
 # A directory with neither a backend nor required_providers is neither side of
 # this policy and has nothing to answer for.
 test_directory_without_required_providers_is_ignored if {

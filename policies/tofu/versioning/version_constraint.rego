@@ -22,34 +22,34 @@ import rego.v1
 # These warn rather than deny: a wrong constraint is a drift risk to raise on
 # the pull request, not a reason to stop the run.
 
-warn contains hcl.finding(providers.declaration_file(d), msg) if {
-	some d, reqs in providers.requirements
-	some req in reqs
-	req.version == ""
-	msg := sprintf(
+warn contains hcl.finding(providers.declaration_file(directory), message) if {
+	some directory, requirements in providers.requirements
+	some requirement in requirements
+	requirement.version == ""
+	message := sprintf(
 		"%s: provider %q is declared without a version constraint, so every run is free to resolve a different one",
-		[d, req.name],
+		[directory, requirement.name],
 	)
 }
 
-warn contains hcl.finding(providers.declaration_file(d), msg) if {
-	some d in providers.roots
-	some req in hcl.set_for(providers.requirements, d)
-	req.version != ""
-	not "~>" in providers.operators(req.version)
-	msg := sprintf(
+warn contains hcl.finding(providers.declaration_file(directory), message) if {
+	some directory in hcl.roots
+	some requirement in hcl.set_for(providers.requirements, directory)
+	requirement.version != ""
+	not "~>" in providers.operators(requirement.version)
+	message := sprintf(
 		"%s: root pins provider %q with %q; a root must use ~> so a new major cannot arrive on its own",
-		[d, req.name, req.version],
+		[directory, requirement.name, requirement.version],
 	)
 }
 
-warn contains hcl.finding(providers.declaration_file(d), msg) if {
-	some d in providers.modules
-	some req in hcl.set_for(providers.requirements, d)
-	"~>" in providers.operators(req.version)
-	msg := sprintf(
+warn contains hcl.finding(providers.declaration_file(directory), message) if {
+	some directory in providers.modules
+	some requirement in hcl.set_for(providers.requirements, directory)
+	"~>" in providers.operators(requirement.version)
+	message := sprintf(
 		"%s: module constrains provider %q with %q; ~> caps every root that consumes it, which is the root's call to make",
-		[d, req.name, req.version],
+		[directory, requirement.name, requirement.version],
 	)
 }
 
@@ -57,15 +57,15 @@ warn contains hcl.finding(providers.declaration_file(d), msg) if {
 # upper bound with < or <= has the same effect on its consumers as ~>, but it
 # has also been written out deliberately, and that is a conversation rather
 # than a mistake.
-warn contains hcl.finding(providers.declaration_file(d), msg) if {
-	some d in providers.modules
-	some req in hcl.set_for(providers.requirements, d)
-	req.version != ""
-	ops := providers.operators(req.version)
-	not "~>" in ops
-	not ">=" in ops
-	msg := sprintf(
+warn contains hcl.finding(providers.declaration_file(directory), message) if {
+	some directory in providers.modules
+	some requirement in hcl.set_for(providers.requirements, directory)
+	requirement.version != ""
+	constraint_operators := providers.operators(requirement.version)
+	not "~>" in constraint_operators
+	not ">=" in constraint_operators
+	message := sprintf(
 		"%s: module constrains provider %q with %q; a module states the lowest version it works against, with >=",
-		[d, req.name, req.version],
+		[directory, requirement.name, requirement.version],
 	)
 }

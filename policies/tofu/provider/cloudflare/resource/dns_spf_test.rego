@@ -113,8 +113,8 @@ test_a_version_tag_alone_is_denied if {
 }
 
 test_softfail_all_is_warned_about if {
-	msgs := warn with input as testdata.spf_txt("v=spf1 include:_spf.google.com ~all")
 	count(deny) == 0 with input as testdata.spf_txt("v=spf1 include:_spf.google.com ~all")
+	msgs := warn with input as testdata.spf_txt("v=spf1 include:_spf.google.com ~all")
 	some m in msgs
 	contains(m.msg, "ends its SPF record in \"~all\" (softfail)")
 	contains(m.msg, "\"-all\" (hardfail) is the stronger terminal")

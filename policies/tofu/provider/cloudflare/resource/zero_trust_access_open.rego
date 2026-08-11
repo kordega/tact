@@ -21,13 +21,13 @@ import rego.v1
 
 access_policies := hcl.resources_of_type(input, "cloudflare_zero_trust_access_policy")
 
-deny contains hcl.finding(policy.path, msg) if {
+deny contains hcl.finding(policy.path, message) if {
 	some policy in access_policies
-	object.get(policy.body, "decision", "") == "allow"
-	some inc in hcl.blocks(object.get(policy.body, "include", null))
-	"everyone" in object.keys(inc)
+	policy.body.decision == "allow"
+	some include_matcher in hcl.blocks(object.get(policy.body, "include", null))
+	"everyone" in object.keys(include_matcher)
 	count(hcl.blocks(object.get(policy.body, "require", null))) == 0
-	msg := sprintf(
+	message := sprintf(
 		"%s: %s decides \"allow\" for an include of everyone with no require, so it admits the entire internet to the application; add a require, or narrow the include",
 		[policy.path, hcl.address(policy)],
 	)

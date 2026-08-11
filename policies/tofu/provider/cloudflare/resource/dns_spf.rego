@@ -31,37 +31,37 @@ spf_modifier := `^[a-z][a-z0-9._-]*=\S*$`
 # Every TXT record whose literal content announces itself as SPF, carried
 # together with the terms that follow the version tag so each rule reads them
 # without re-parsing.
-spf_records contains rec if {
-	some r in hcl.resources_of_type(input, "cloudflare_dns_record")
-	is_txt_type(r)
-	content := object.get(r.body, "content", "")
+spf_records contains record if {
+	some dns_record in hcl.resources_of_type(input, "cloudflare_dns_record")
+	is_txt_type(dns_record)
+	content := object.get(dns_record.body, "content", "")
 	is_string(content)
 	not hcl.unresolved(content)
 	normalised := lower(trim_space(content))
 	regex.match(`^v=spf1(\s|$)`, normalised)
 	parts := regex.split(`\s+`, normalised)
-	rec := {
-		"path": r.path,
-		"address": hcl.address(r),
+	record := {
+		"path": dns_record.path,
+		"address": hcl.address(dns_record),
 		"terms": array.slice(parts, 1, count(parts)),
 	}
 }
 
 # Mechanism names and qualifiers are case-insensitive (RFC 7208 s4.6.1), so the
 # type is matched the same way rather than assuming Cloudflare's uppercase TXT.
-is_txt_type(r) if lower(object.get(r.body, "type", "")) == "txt"
+is_txt_type(dns_record) if lower(object.get(dns_record.body, "type", "")) == "txt"
 
 # A term the mechanism and modifier grammars both reject is a typo - a bare
 # domain, "v=spf1 mailfrom ...", a stray word. One is enough to make the record
 # unparseable, at which point a receiver returns permerror and, in practice,
 # stops checking SPF for the message: the domain is left spoofable.
-deny contains hcl.finding(rec.path, msg) if {
-	some rec in spf_records
-	some term in rec.terms
+deny contains hcl.finding(record.path, message) if {
+	some record in spf_records
+	some term in record.terms
 	not valid_term(term)
-	msg := sprintf(
+	message := sprintf(
 		"%s: %s is a TXT record beginning v=spf1 but the term %q is not a valid SPF mechanism or modifier, so the record does not parse and receivers fall back to treating the domain as unprotected",
-		[rec.path, rec.address, term],
+		[record.path, record.address, term],
 	)
 }
 
@@ -74,14 +74,14 @@ valid_term(term) if regex.match(spf_modifier, term)
 # the sender either way. Both hand a receiver a record that ends by declining to
 # reject anyone, so the domain is as spoofable as one with no record at all. The
 # record is only judged once it parses, so this speaks to a formed record.
-deny contains hcl.finding(rec.path, msg) if {
-	some rec in spf_records
-	well_formed(rec)
-	q := operative_all_qualifier(rec.terms)
-	q in {"+", "?"}
-	msg := sprintf(
+deny contains hcl.finding(record.path, message) if {
+	some record in spf_records
+	well_formed(record)
+	all_qualifier := operative_all_qualifier(record.terms)
+	all_qualifier in {"+", "?"}
+	message := sprintf(
 		"%s: %s ends its SPF record in %q, which %s; end it in \"-all\" so mail from any host it does not list is rejected",
-		[rec.path, rec.address, sprintf("%sall", [q]), all_reason(q)],
+		[record.path, record.address, sprintf("%sall", [all_qualifier]), all_reason(all_qualifier)],
 	)
 }
 
@@ -93,14 +93,14 @@ all_reason("?") := "leaves the result neutral, so a forged sender is neither pas
 # nothing about the rest: the default result is neutral, so it authorises the
 # hosts it names and blocks nobody. A record that only allow-lists a provider
 # and forgets the terminal is the common shape of this, and it protects nothing.
-deny contains hcl.finding(rec.path, msg) if {
-	some rec in spf_records
-	well_formed(rec)
-	not has_all(rec.terms)
-	not has_redirect(rec.terms)
-	msg := sprintf(
+deny contains hcl.finding(record.path, message) if {
+	some record in spf_records
+	well_formed(record)
+	not has_all(record.terms)
+	not has_redirect(record.terms)
+	message := sprintf(
 		"%s: %s has no terminating \"all\" mechanism and no \"redirect\" modifier, so its result is neutral for every host it does not list and the domain stays spoofable; end it in \"-all\"",
-		[rec.path, rec.address],
+		[record.path, record.address],
 	)
 }
 
@@ -108,13 +108,13 @@ deny contains hcl.finding(rec.path, msg) if {
 # accepted but marked suspicious - and plenty of domains run it deliberately
 # while they watch reports before committing. It is the weaker of the two safe
 # endings, so it is surfaced rather than denied: "-all" is the one that rejects.
-warn contains hcl.finding(rec.path, msg) if {
-	some rec in spf_records
-	well_formed(rec)
-	operative_all_qualifier(rec.terms) == "~"
-	msg := sprintf(
+warn contains hcl.finding(record.path, message) if {
+	some record in spf_records
+	well_formed(record)
+	operative_all_qualifier(record.terms) == "~"
+	message := sprintf(
 		"%s: %s ends its SPF record in \"~all\" (softfail), which marks mail from an unlisted host rather than rejecting it; \"-all\" (hardfail) is the stronger terminal",
-		[rec.path, rec.address],
+		[record.path, record.address],
 	)
 }
 
@@ -123,19 +123,19 @@ warn contains hcl.finding(rec.path, msg) if {
 # eleventh stops and returns permerror, which discards the whole record, so a
 # record over the limit is one include away from silently protecting nothing.
 # The record itself is well formed and secure in intent, hence a warning.
-warn contains hcl.finding(rec.path, msg) if {
-	some rec in spf_records
-	well_formed(rec)
-	n := lookup_count(rec.terms)
-	n > 10
-	msg := sprintf(
+warn contains hcl.finding(record.path, message) if {
+	some record in spf_records
+	well_formed(record)
+	lookups := lookup_count(record.terms)
+	lookups > 10
+	message := sprintf(
 		"%s: %s uses %d DNS-lookup mechanisms (include/a/mx/ptr/exists/redirect), over the limit of 10 in RFC 7208; a receiver stops at the tenth and returns permerror, discarding the record",
-		[rec.path, rec.address, n],
+		[record.path, record.address, lookups],
 	)
 }
 
-well_formed(rec) if {
-	every term in rec.terms {
+well_formed(record) if {
+	every term in record.terms {
 		valid_term(term)
 	}
 }
@@ -152,19 +152,21 @@ has_redirect(terms) if {
 
 # The first "all" is the operative one: SPF evaluates left to right and stops at
 # the first match, so any "all" after it never decides anything.
-operative_all_qualifier(terms) := qualifier(terms[idx]) if {
-	idx := min({i | some i; regex.match(`^[-+?~]?all$`, terms[i])})
+operative_all_qualifier(terms) := qualifier(terms[first_all]) if {
+	first_all := min({index |
+		some index, term in terms
+		regex.match(`^[-+?~]?all$`, term)
+	})
 }
 
-qualifier(term) := normalise_qualifier(raw) if {
-	m := regex.find_all_string_submatch_n(`^([-+?~]?)all$`, term, 1)
-	raw := m[0][1]
+qualifier(term) := normalise_qualifier(submatches[0][1]) if {
+	submatches := regex.find_all_string_submatch_n(`^([-+?~]?)all$`, term, 1)
 }
 
 # An "all" with no qualifier defaults to "+" (RFC 7208 s4.6.2).
 normalise_qualifier("") := "+"
 
-normalise_qualifier(q) := q if q != ""
+normalise_qualifier(found) := found if found != ""
 
 lookup_count(terms) := count([term |
 	some term in terms

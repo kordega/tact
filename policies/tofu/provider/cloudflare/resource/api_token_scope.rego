@@ -35,12 +35,12 @@ class_wildcards(resources) := {key |
 # effect defaults to "allow" in the provider, so a statement that omits it still
 # grants; a statement that resolves to anything other than "allow" (an explicit
 # "deny", or a variable this policy cannot read) is left alone.
-warn contains hcl.finding(token.path, msg) if {
+warn contains hcl.finding(token.path, message) if {
 	some token in api_tokens
 	some policy in hcl.blocks(object.get(token.body, "policies", null))
 	object.get(policy, "effect", "allow") == "allow"
 	some key in class_wildcards(object.get(policy, "resources", {}))
-	msg := sprintf(
+	message := sprintf(
 		"%s: %s grants %q = \"*\", which covers every resource of that class rather than the ones the token needs; list them",
 		[token.path, hcl.address(token), key],
 	)

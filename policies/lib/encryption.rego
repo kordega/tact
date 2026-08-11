@@ -3,6 +3,9 @@
 # file costs and what a plaintext state file costs are different arguments, so
 # each policy spells its own warnings out rather than sharing a rule template.
 #
+# Which directories are roots is data.lib.hcl's answer, shared with every other
+# library that has to tell a root from a module.
+#
 # Nothing here is evaluated at policy time: conftest only reads deny and warn
 # out of package main.
 package lib.encryption
@@ -10,63 +13,58 @@ package lib.encryption
 import data.lib.hcl
 import rego.v1
 
-# Input is conftest --combine over the whole repository:
-# [{path, contents}, ...] with repository-relative paths.
-
-terraform_blocks[d] contains block if {
-	some file in input
-	d := hcl.directory(file.path)
-	some block in object.get(file.contents, "terraform", [])
+# The files each root spells a terraform block out in, for hcl.first_file to
+# pick a finding's anchor from.
+root_files[entry.directory] contains entry.path if {
+	some entry in hcl.terraform_blocks
+	entry.directory in hcl.roots
 }
 
-roots contains d if {
-	some d, blocks in terraform_blocks
-	some block in blocks
-	has_state_storage(block)
-}
+root_file(directory) := hcl.first_file(root_files, directory)
 
-# The files each root spells a terraform block out in. A root is a directory
-# and has no file of its own to point a finding at, so it borrows one of these.
-# Roots that split the block across files get the first by name, chosen the
-# same way every run so that one problem is not reported once per file.
-root_files[d] contains file.path if {
-	some file in input
-	d := hcl.directory(file.path)
-	some _ in object.get(file.contents, "terraform", [])
-}
-
-root_file(d) := min(hcl.set_for(root_files, d))
-
-has_state_storage(block) if object.get(block, "backend", null) != null
-
-has_state_storage(block) if object.get(block, "state_store", null) != null
-
-blocks[d] contains enc if {
-	some d in roots
-	some block in terraform_blocks[d]
-	some enc in object.get(block, "encryption", [])
+blocks[entry.directory] contains encryption_block if {
+	some entry in hcl.terraform_blocks
+	entry.directory in hcl.roots
+	some encryption_block in object.get(entry.block, "encryption", [])
 }
 
 # The plan{} or state{} sub-blocks of a root, by kind. A root that declares
 # neither gets the empty set, which is what the "sub-block is missing" rules
 # key off.
-sub_blocks(d, kind) := {sub |
-	some enc in hcl.set_for(blocks, d)
-	some sub in object.get(enc, kind, [])
+sub_blocks(directory, kind) := {sub_block |
+	some encryption_block in hcl.set_for(blocks, directory)
+	some sub_block in object.get(encryption_block, kind, [])
 }
 
-declared_methods[d] contains ref if {
-	some d in roots
-	some enc in blocks[d]
-	some mtype, by_name in object.get(enc, "method", {})
-	some mname, _ in by_name
-	ref := sprintf("method.%s.%s", [mtype, mname])
+declared_methods[directory] contains reference if {
+	some directory in hcl.roots
+	some encryption_block in hcl.set_for(blocks, directory)
+	some method_type, by_name in object.get(encryption_block, "method", {})
+	some method_name, _ in by_name
+	reference := sprintf("method.%s.%s", [method_type, method_name])
 }
 
-declared_key_providers[d] contains ref if {
-	some d in roots
-	some enc in blocks[d]
-	some ktype, by_name in object.get(enc, "key_provider", {})
-	some kname, _ in by_name
-	ref := sprintf("key_provider.%s.%s", [ktype, kname])
+declared_key_providers[directory] contains reference if {
+	some directory in hcl.roots
+	some encryption_block in hcl.set_for(blocks, directory)
+	some provider_type, by_name in object.get(encryption_block, "key_provider", {})
+	some provider_name, _ in by_name
+	reference := sprintf("key_provider.%s.%s", [provider_type, provider_name])
+}
+
+# The key_provider each method{} named by `method_reference` points at, as
+# {name, keys} where name is the "type.name" of the method. A plan{} or state{}
+# sub-block depends on the one method it names, so following the chain from
+# that reference is what keeps each policy speaking only about its own
+# artifact rather than auditing every method in the root.
+method_key_refs(directory, method_reference) := {key_reference |
+	some encryption_block in hcl.set_for(blocks, directory)
+	some method_type, by_name in object.get(encryption_block, "method", {})
+	some method_name, bodies in by_name
+	method_reference == sprintf("method.%s.%s", [method_type, method_name])
+	some body in bodies
+	key_reference := {
+		"name": sprintf("%s.%s", [method_type, method_name]),
+		"keys": hcl.deref(object.get(body, "keys", "")),
+	}
 }

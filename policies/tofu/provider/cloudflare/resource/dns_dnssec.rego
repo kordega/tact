@@ -19,11 +19,11 @@ dnssec_signers := hcl.resources_of_type(input, "cloudflare_zone_dnssec")
 # A zone and the resource that signs it are applied together, so the pair is
 # looked for within one root. Reaching across roots would credit a zone with a
 # signer that a separate apply owns and can remove without this one noticing.
-deny contains hcl.finding(zone.path, msg) if {
+deny contains hcl.finding(zone.path, message) if {
 	some zone in dnssec_zones
 	not dnssec_signed(zone)
 	not dnssec_unprovable_signer(hcl.directory(zone.path))
-	msg := sprintf(
+	message := sprintf(
 		"%s: %s has no cloudflare_zone_dnssec resource in %s, so the zone is served unsigned and a forged answer for it validates",
 		[zone.path, hcl.address(zone), hcl.directory(zone.path)],
 	)
@@ -46,19 +46,19 @@ dnssec_zone_ref(signer) := hcl.deref(zone_id) if {
 # output - could be pointing at any zone in the root, and this policy only
 # reports what it can prove. One of those stands the rule down for that root
 # rather than reporting every zone in it.
-dnssec_unprovable_signer(d) if {
+dnssec_unprovable_signer(directory) if {
 	some signer in dnssec_signers
-	hcl.directory(signer.path) == d
+	hcl.directory(signer.path) == directory
 	not startswith(dnssec_zone_ref(signer), "cloudflare_zone.")
 }
 
 # status is optional in the provider, and a resource without it asserts
 # nothing: whatever the zone was in before the apply, it stays in. For a zone
 # imported from a registrar move that is usually unsigned.
-deny contains hcl.finding(signer.path, msg) if {
+deny contains hcl.finding(signer.path, message) if {
 	some signer in dnssec_signers
 	object.get(signer.body, "status", null) == null
-	msg := sprintf(
+	message := sprintf(
 		"%s: %s must set status = \"active\", a cloudflare_zone_dnssec without one leaves the zone in whatever state it was already in",
 		[signer.path, hcl.address(signer)],
 	)
@@ -66,13 +66,13 @@ deny contains hcl.finding(signer.path, msg) if {
 
 # Only literals can be checked; hcl2json renders `status = var.dnssec` as
 # "${var.dnssec}", which says nothing about the value it will take.
-deny contains hcl.finding(signer.path, msg) if {
+deny contains hcl.finding(signer.path, message) if {
 	some signer in dnssec_signers
 	status := object.get(signer.body, "status", null)
 	is_string(status)
 	not hcl.unresolved(status)
 	status != "active"
-	msg := sprintf(
+	message := sprintf(
 		"%s: %s sets status = %q; the only value that signs the zone is \"active\"",
 		[signer.path, hcl.address(signer), status],
 	)
@@ -86,11 +86,11 @@ deny contains hcl.finding(signer.path, msg) if {
 # the other reason, which is why this is a warning rather than a denial.
 #
 # https://developers.cloudflare.com/dns/dnssec/enable-nsec3/
-warn contains hcl.finding(signer.path, msg) if {
+warn contains hcl.finding(signer.path, message) if {
 	some signer in dnssec_signers
-	object.get(signer.body, "dnssec_use_nsec3", null) == true
+	signer.body.dnssec_use_nsec3 == true
 	object.get(signer.body, "dnssec_presigned", null) != true
-	msg := sprintf(
+	message := sprintf(
 		"%s: %s enables dnssec_use_nsec3 on a zone Cloudflare signs itself, where NSEC already prevents zone walking; NSEC3 belongs to a pre-signed zone or to a compliance requirement",
 		[signer.path, hcl.address(signer)],
 	)
@@ -102,10 +102,10 @@ warn contains hcl.finding(signer.path, msg) if {
 # setup, and it reads as a one-line boolean in a diff.
 #
 # https://developers.cloudflare.com/dns/dnssec/multi-signer-dnssec/
-warn contains hcl.finding(signer.path, msg) if {
+warn contains hcl.finding(signer.path, message) if {
 	some signer in dnssec_signers
-	object.get(signer.body, "dnssec_multi_signer", null) == true
-	msg := sprintf(
+	signer.body.dnssec_multi_signer == true
+	message := sprintf(
 		"%s: %s enables dnssec_multi_signer, which lets DNSKEY records from outside Cloudflare sign for the zone; leave it off unless a second provider serves this zone",
 		[signer.path, hcl.address(signer)],
 	)

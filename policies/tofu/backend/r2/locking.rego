@@ -13,22 +13,22 @@ import rego.v1
 # R2 it comes from use_lockfile, which takes the lock through a conditional
 # write on the state object itself.
 
-deny contains hcl.finding(r2.backend_file(d), msg) if {
-	some d in r2.roots
-	some body in hcl.set_for(r2.backend_bodies, d)
+deny contains hcl.finding(r2.backend_file(directory), message) if {
+	some directory in r2.roots
+	some body in hcl.set_for(r2.backend_bodies, directory)
 	object.get(body, "use_lockfile", null) != true
-	msg := sprintf(
+	message := sprintf(
 		"%s: R2 backend must set use_lockfile = true (got %v), otherwise two applies write the same state with no lock between them",
-		[d, object.get(body, "use_lockfile", "<unset>")],
+		[directory, object.get(body, "use_lockfile", "<unset>")],
 	)
 }
 
-deny contains hcl.finding(r2.backend_file(d), msg) if {
-	some d in r2.roots
-	some body in hcl.set_for(r2.backend_bodies, d)
+deny contains hcl.finding(r2.backend_file(directory), message) if {
+	some directory in r2.roots
+	some body in hcl.set_for(r2.backend_bodies, directory)
 	object.get(body, "dynamodb_table", null) != null
-	msg := sprintf(
+	message := sprintf(
 		"%s: R2 backend must not set dynamodb_table, there is no DynamoDB behind R2; locking comes from use_lockfile = true",
-		[d],
+		[directory],
 	)
 }

@@ -56,7 +56,7 @@ test_backend_bodies_of_a_non_r2_root_are_not_collected if {
 }
 
 test_only_the_r2_endpoints_are_collected if {
-	r2_endpoints == {"roots/example": {"https://0123456789abcdef.r2.cloudflarestorage.com"}} with input as testdata.root(testdata.backend)
+	account_endpoints == {"roots/example": {"https://0123456789abcdef.r2.cloudflarestorage.com"}} with input as testdata.root(testdata.backend)
 }
 
 test_buckets_are_collected_with_their_address if {
