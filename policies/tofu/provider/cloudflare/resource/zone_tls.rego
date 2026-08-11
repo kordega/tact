@@ -21,22 +21,22 @@ import rego.v1
 
 zone_settings := hcl.resources_of_type(input, "cloudflare_zone_setting")
 
-setting(sid) := {s |
-	some s in zone_settings
-	object.get(s.body, "setting_id", "") == sid
+zone_settings_with_id(setting_id) := {setting |
+	some setting in zone_settings
+	setting.body.setting_id == setting_id
 }
 
 # ssl = "off" serves the edge over cleartext; ssl = "flexible" encrypts the
 # browser leg but fetches from the origin over plain HTTP, which anyone on the
 # path between Cloudflare and the origin can read or rewrite. Both leave a leg
 # unencrypted, so both are denied. "full" and "strict" are the encrypted modes.
-deny contains hcl.finding(s.path, msg) if {
-	some s in setting("ssl")
-	val := object.get(s.body, "value", "")
-	val in {"off", "flexible"}
-	msg := sprintf(
+deny contains hcl.finding(setting.path, message) if {
+	some setting in zone_settings_with_id("ssl")
+	value := setting.body.value
+	value in {"off", "flexible"}
+	message := sprintf(
 		"%s: %s sets ssl = %q, which serves at least one leg (browser or origin) over cleartext; use \"strict\", or \"full\" only where the origin certificate cannot be validated",
-		[s.path, hcl.address(s), val],
+		[setting.path, hcl.address(setting), value],
 	)
 }
 
@@ -44,12 +44,12 @@ deny contains hcl.finding(s.path, msg) if {
 # a machine-in-the-middle presenting any certificate is trusted. It is a real
 # encrypted mode, unlike off/flexible, which is why this warns rather than
 # denies: some origins genuinely cannot present a validatable certificate.
-warn contains hcl.finding(s.path, msg) if {
-	some s in setting("ssl")
-	object.get(s.body, "value", "") == "full"
-	msg := sprintf(
+warn contains hcl.finding(setting.path, message) if {
+	some setting in zone_settings_with_id("ssl")
+	setting.body.value == "full"
+	message := sprintf(
 		"%s: %s sets ssl = \"full\", which encrypts the origin leg without validating its certificate; \"strict\" validates it",
-		[s.path, hcl.address(s)],
+		[setting.path, hcl.address(setting)],
 	)
 }
 
@@ -57,13 +57,13 @@ warn contains hcl.finding(s.path, msg) if {
 # weaknesses that retirement was about. Pinning min_tls_version to one of them
 # re-admits a client that will only speak the broken version, so it is denied.
 # This fires on the literal downgrade only; 1.2 and 1.3 are fine.
-deny contains hcl.finding(s.path, msg) if {
-	some s in setting("min_tls_version")
-	val := object.get(s.body, "value", "")
-	val in {"1.0", "1.1"}
-	msg := sprintf(
+deny contains hcl.finding(setting.path, message) if {
+	some setting in zone_settings_with_id("min_tls_version")
+	value := setting.body.value
+	value in {"1.0", "1.1"}
+	message := sprintf(
 		"%s: %s sets min_tls_version = %q, which admits a client negotiating a TLS version withdrawn as breakable (RFC 8996); the floor is \"1.2\"",
-		[s.path, hcl.address(s), val],
+		[setting.path, hcl.address(setting), value],
 	)
 }
 
@@ -71,23 +71,23 @@ deny contains hcl.finding(s.path, msg) if {
 # rather than redirected to HTTPS, so the first request of a session can be read
 # in full. This is redirect hygiene rather than a proven cleartext origin leg -
 # the encrypted site still exists next to it - so it warns.
-warn contains hcl.finding(s.path, msg) if {
-	some s in setting("always_use_https")
-	object.get(s.body, "value", "") == "off"
-	msg := sprintf(
+warn contains hcl.finding(setting.path, message) if {
+	some setting in zone_settings_with_id("always_use_https")
+	setting.body.value == "off"
+	message := sprintf(
 		"%s: %s sets always_use_https = \"off\", so a plaintext request is served rather than redirected to HTTPS; turn it on",
-		[s.path, hcl.address(s)],
+		[setting.path, hcl.address(setting)],
 	)
 }
 
 # Turning tls_1_3 off drops the one TLS version without the legacy handshake
 # weaknesses and denies clients its faster, safer negotiation. Nothing breaks
 # without it, so it warns.
-warn contains hcl.finding(s.path, msg) if {
-	some s in setting("tls_1_3")
-	object.get(s.body, "value", "") == "off"
-	msg := sprintf(
+warn contains hcl.finding(setting.path, message) if {
+	some setting in zone_settings_with_id("tls_1_3")
+	setting.body.value == "off"
+	message := sprintf(
 		"%s: %s sets tls_1_3 = \"off\", which disables the only TLS version free of the legacy handshake weaknesses; leave it on",
-		[s.path, hcl.address(s)],
+		[setting.path, hcl.address(setting)],
 	)
 }

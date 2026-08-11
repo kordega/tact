@@ -22,24 +22,24 @@ secret_settings := {
 # root unusable in CI.
 machine_local_settings := {"profile", "shared_credentials_files", "shared_config_files"}
 
-deny contains hcl.finding(r2.backend_file(d), msg) if {
-	some d in r2.roots
-	some body in hcl.set_for(r2.backend_bodies, d)
-	some setting, env in secret_settings
+deny contains hcl.finding(r2.backend_file(directory), message) if {
+	some directory in r2.roots
+	some body in hcl.set_for(r2.backend_bodies, directory)
+	some setting, environment_variable in secret_settings
 	object.get(body, setting, null) != null
-	msg := sprintf(
+	message := sprintf(
 		"%s: R2 backend must not set %s, a backend block cannot read variables so this value is a committed secret; pass %s instead",
-		[d, setting, env],
+		[directory, setting, environment_variable],
 	)
 }
 
-deny contains hcl.finding(r2.backend_file(d), msg) if {
-	some d in r2.roots
-	some body in hcl.set_for(r2.backend_bodies, d)
+deny contains hcl.finding(r2.backend_file(directory), message) if {
+	some directory in r2.roots
+	some body in hcl.set_for(r2.backend_bodies, directory)
 	some setting in machine_local_settings
 	object.get(body, setting, null) != null
-	msg := sprintf(
+	message := sprintf(
 		"%s: R2 backend must not set %s, it resolves against one developer's filesystem and is not reproducible in CI",
-		[d, setting],
+		[directory, setting],
 	)
 }

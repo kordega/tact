@@ -26,11 +26,11 @@ allowed_values := {
 	"storage_class": {"InfrequentAccess", "Standard"},
 }
 
-deny contains hcl.finding(bucket.path, msg) if {
+deny contains hcl.finding(bucket.path, message) if {
 	some bucket in r2.buckets
 	some argument, reason in explicit_arguments
 	object.get(bucket.body, argument, null) == null
-	msg := sprintf(
+	message := sprintf(
 		"%s: %s must set %s explicitly: %s",
 		[bucket.path, hcl.address(bucket), argument, reason],
 	)
@@ -38,14 +38,14 @@ deny contains hcl.finding(bucket.path, msg) if {
 
 # Only literals can be checked; hcl2json renders `location = var.location` as
 # "${var.location}", which says nothing about the value it will take.
-deny contains hcl.finding(bucket.path, msg) if {
+deny contains hcl.finding(bucket.path, message) if {
 	some bucket in r2.buckets
 	some argument, allowed in allowed_values
 	value := object.get(bucket.body, argument, null)
 	is_string(value)
 	not hcl.unresolved(value)
 	not value in allowed
-	msg := sprintf(
+	message := sprintf(
 		"%s: %s sets %s = %q, which is not one of %s",
 		[bucket.path, hcl.address(bucket), argument, value, concat(", ", sort(allowed))],
 	)

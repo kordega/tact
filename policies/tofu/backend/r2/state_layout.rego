@@ -12,20 +12,20 @@ import rego.v1
 # resources on every apply while both plans look clean, which is the reason
 # this policy reads the whole repository at once rather than one root at a time.
 
-deny contains hcl.finding(r2.backend_file(d), msg) if {
-	some d in r2.roots
-	some body in hcl.set_for(r2.backend_bodies, d)
+deny contains hcl.finding(r2.backend_file(directory), message) if {
+	some directory in r2.roots
+	some body in hcl.set_for(r2.backend_bodies, directory)
 	some setting in {"bucket", "key"}
 	object.get(body, setting, "") == ""
-	msg := sprintf("%s: R2 backend must set %s", [d, setting])
+	message := sprintf("%s: R2 backend must set %s", [directory, setting])
 }
 
-state_objects[location] contains d if {
-	some d in r2.roots
-	some body in hcl.set_for(r2.backend_bodies, d)
+state_objects[location] contains directory if {
+	some directory in r2.roots
+	some body in hcl.set_for(r2.backend_bodies, directory)
 	bucket := object.get(body, "bucket", "")
-	key := object.get(body, "key", "")
 	bucket != ""
+	key := object.get(body, "key", "")
 	key != ""
 	location := sprintf("%s/%s", [bucket, key])
 }
@@ -34,11 +34,11 @@ state_objects[location] contains d if {
 # one file it happened in. It anchors to the first of them and names the rest
 # in the message, which at least puts the finding next to one of the two
 # backends that have to change.
-deny contains hcl.finding(r2.backend_file(min(dirs)), msg) if {
-	some location, dirs in state_objects
-	count(dirs) > 1
-	msg := sprintf(
+deny contains hcl.finding(r2.backend_file(min(directories)), message) if {
+	some location, directories in state_objects
+	count(directories) > 1
+	message := sprintf(
 		"R2 state object %q is claimed by more than one root (%s): give each root its own key",
-		[location, concat(", ", sort(dirs))],
+		[location, concat(", ", sort(directories))],
 	)
 }

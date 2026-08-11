@@ -34,6 +34,51 @@ test_set_for_defaults_to_the_empty_set if {
 	set_for({"a": {1}}, "b") == set()
 }
 
+test_first_file_picks_the_first_by_name if {
+	first_file({"roots/example": {"roots/example/versions.tf", "roots/example/backend.tf"}}, "roots/example") == "roots/example/backend.tf"
+}
+
+test_terraform_blocks_carry_the_file_and_its_directory if {
+	terraform_blocks == {{
+		"path": "roots/example/versions.tf",
+		"directory": "roots/example",
+		"block": {"required_version": ">= 1.12.4"},
+	}} with input as [{
+		"path": "roots/example/versions.tf",
+		"contents": {"terraform": [{"required_version": ">= 1.12.4"}]},
+	}]
+}
+
+test_a_file_without_a_terraform_block_yields_nothing if {
+	terraform_blocks == set() with input as [{
+		"path": "roots/example/dns.tf",
+		"contents": {"resource": {"cloudflare_zone": {"example": [{"name": "example.com"}]}}},
+	}]
+}
+
+test_a_backend_makes_the_directory_a_root if {
+	roots == {"roots/example"} with input as [{
+		"path": "roots/example/versions.tf",
+		"contents": {"terraform": [{"backend": {"s3": [{"bucket": "tofu-state"}]}}]},
+	}]
+}
+
+# state_store{} is OpenTofu 1.11's pluggable state storage, and a root that
+# uses it owns its state exactly as one with a backend does.
+test_a_state_store_makes_the_directory_a_root if {
+	roots == {"roots/example"} with input as [{
+		"path": "roots/example/versions.tf",
+		"contents": {"terraform": [{"state_store": {"example": [{}]}}]},
+	}]
+}
+
+test_a_module_without_state_storage_is_not_a_root if {
+	roots == set() with input as [{
+		"path": "lib/modules/example/versions.tf",
+		"contents": {"terraform": [{"required_providers": [{"cloudflare": "~> 5.0"}]}]},
+	}]
+}
+
 # `foo = { ... }` arrives as an object, `foo { ... }` as a list of objects.
 test_blocks_wraps_an_object if {
 	blocks({"s3": "https://example.com"}) == [{"s3": "https://example.com"}]

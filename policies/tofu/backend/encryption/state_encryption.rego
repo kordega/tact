@@ -10,29 +10,29 @@ import rego.v1
 # the configuration ever touched, so an unencrypted one is a standing copy of
 # those secrets in the bucket, readable by anyone who can read the bucket.
 
-state_blocks(d) := encryption.sub_blocks(d, "state")
+state_blocks(directory) := encryption.sub_blocks(directory, "state")
 
-warn contains hcl.finding(encryption.root_file(d), msg) if {
-	some d in encryption.roots
-	count(hcl.set_for(encryption.blocks, d)) == 0
-	msg := sprintf(
+warn contains hcl.finding(encryption.root_file(directory), message) if {
+	some directory in hcl.roots
+	count(hcl.set_for(encryption.blocks, directory)) == 0
+	message := sprintf(
 		"%s: terraform.encryption block is missing, so state is written in plaintext",
-		[d],
+		[directory],
 	)
 }
 
-warn contains hcl.finding(encryption.root_file(d), msg) if {
-	some d in encryption.roots
-	count(hcl.set_for(encryption.blocks, d)) > 0
-	count(state_blocks(d)) == 0
-	msg := sprintf("%s: terraform.encryption is declared but has no state{} sub-block", [d])
+warn contains hcl.finding(encryption.root_file(directory), message) if {
+	some directory in hcl.roots
+	count(hcl.set_for(encryption.blocks, directory)) > 0
+	count(state_blocks(directory)) == 0
+	message := sprintf("%s: terraform.encryption is declared but has no state{} sub-block", [directory])
 }
 
-warn contains hcl.finding(encryption.root_file(d), msg) if {
-	some d in encryption.roots
-	some s in state_blocks(d)
-	not s.method
-	msg := sprintf("%s: terraform.encryption.state must set method", [d])
+warn contains hcl.finding(encryption.root_file(directory), message) if {
+	some directory in hcl.roots
+	some state_block in state_blocks(directory)
+	not state_block.method
+	message := sprintf("%s: terraform.encryption.state must set method", [directory])
 }
 
 # A literal `true` parses to a JSON boolean. `enforced = var.foo` arrives as
@@ -41,24 +41,24 @@ warn contains hcl.finding(encryption.root_file(d), msg) if {
 # Without enforced, OpenTofu still reads and writes unencrypted state rather
 # than failing, so a root that loses its key provider silently degrades to
 # plaintext instead of stopping.
-warn contains hcl.finding(encryption.root_file(d), msg) if {
-	some d in encryption.roots
-	some s in state_blocks(d)
-	object.get(s, "enforced", null) != true
-	msg := sprintf(
+warn contains hcl.finding(encryption.root_file(directory), message) if {
+	some directory in hcl.roots
+	some state_block in state_blocks(directory)
+	object.get(state_block, "enforced", null) != true
+	message := sprintf(
 		"%s: terraform.encryption.state must set enforced = true (got %v)",
-		[d, object.get(s, "enforced", "<unset>")],
+		[directory, object.get(state_block, "enforced", "<unset>")],
 	)
 }
 
-warn contains hcl.finding(encryption.root_file(d), msg) if {
-	some d in encryption.roots
-	some s in state_blocks(d)
-	ref := hcl.deref(s.method)
-	not ref in hcl.set_for(encryption.declared_methods, d)
-	msg := sprintf(
+warn contains hcl.finding(encryption.root_file(directory), message) if {
+	some directory in hcl.roots
+	some state_block in state_blocks(directory)
+	reference := hcl.deref(state_block.method)
+	not reference in hcl.set_for(encryption.declared_methods, directory)
+	message := sprintf(
 		"%s: terraform.encryption.state.method references %q, which is not a declared method block",
-		[d, ref],
+		[directory, reference],
 	)
 }
 
@@ -66,18 +66,13 @@ warn contains hcl.finding(encryption.root_file(d), msg) if {
 # method in the root, so that this policy only speaks about state encryption.
 # A method shared with plan{} produces the identical message from both
 # policies, and warn is a set, so the root is still reported once.
-warn contains hcl.finding(encryption.root_file(d), msg) if {
-	some d in encryption.roots
-	some s in state_blocks(d)
-	some enc in hcl.set_for(encryption.blocks, d)
-	some mtype, by_name in object.get(enc, "method", {})
-	some mname, bodies in by_name
-	hcl.deref(s.method) == sprintf("method.%s.%s", [mtype, mname])
-	some body in bodies
-	ref := hcl.deref(object.get(body, "keys", ""))
-	not ref in hcl.set_for(encryption.declared_key_providers, d)
-	msg := sprintf(
-		"%s: method.%s.%s keys references %q, which is not a declared key_provider block",
-		[d, mtype, mname, ref],
+warn contains hcl.finding(encryption.root_file(directory), message) if {
+	some directory in hcl.roots
+	some state_block in state_blocks(directory)
+	some method in encryption.method_key_refs(directory, hcl.deref(state_block.method))
+	not method.keys in hcl.set_for(encryption.declared_key_providers, directory)
+	message := sprintf(
+		"%s: method.%s keys references %q, which is not a declared key_provider block",
+		[directory, method.name, method.keys],
 	)
 }

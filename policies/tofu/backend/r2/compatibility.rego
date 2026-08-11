@@ -25,23 +25,23 @@ required_true_settings := {
 
 # A literal `true` parses to a JSON boolean. Anything else - unset, false, or
 # an expression hcl2json rendered as "${...}" - cannot be proven correct here.
-deny contains hcl.finding(r2.backend_file(d), msg) if {
-	some d in r2.roots
-	some body in hcl.set_for(r2.backend_bodies, d)
+deny contains hcl.finding(r2.backend_file(directory), message) if {
+	some directory in r2.roots
+	some body in hcl.set_for(r2.backend_bodies, directory)
 	some setting, reason in required_true_settings
 	object.get(body, setting, null) != true
-	msg := sprintf(
+	message := sprintf(
 		"%s: R2 backend must set %s = true (got %v): %s",
-		[d, setting, object.get(body, setting, "<unset>"), reason],
+		[directory, setting, object.get(body, setting, "<unset>"), reason],
 	)
 }
 
-deny contains hcl.finding(r2.backend_file(d), msg) if {
-	some d in r2.roots
-	some body in hcl.set_for(r2.backend_bodies, d)
+deny contains hcl.finding(r2.backend_file(directory), message) if {
+	some directory in r2.roots
+	some body in hcl.set_for(r2.backend_bodies, directory)
 	object.get(body, "region", null) != "auto"
-	msg := sprintf(
+	message := sprintf(
 		"%s: R2 backend must set region = \"auto\" (got %v), R2 has no regional endpoints",
-		[d, object.get(body, "region", "<unset>")],
+		[directory, object.get(body, "region", "<unset>")],
 	)
 }

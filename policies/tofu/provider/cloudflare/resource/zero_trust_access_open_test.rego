@@ -6,7 +6,7 @@ import rego.v1
 test_allow_everyone_without_require_is_denied if {
 	msgs := deny with input as testdata.access_policy_with({"include": [{"everyone": {}}]})
 	some m in msgs
-	contains(m.msg, "cloudflare_zero_trust_access_policy.p decides \"allow\" for an include of everyone")
+	contains(m.msg, "cloudflare_zero_trust_access_policy.example decides \"allow\" for an include of everyone")
 	contains(m.msg, "entire internet")
 }
 

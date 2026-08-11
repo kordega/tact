@@ -1,8 +1,10 @@
 # A single shared answer to "which parts of this repository are R2". Detection
 # lives here so that every tofu/backend/r2/* and every
-# tofu/provider/cloudflare/resource/r2/* policy agrees on what an R2 root is,
-# and so that each policy directory can stay one
-# concern wide.
+# tofu/provider/cloudflare/resource/r2_* policy agrees on what an R2 root is,
+# and so that each of those policies can stay one concern wide.
+#
+# Nothing here is evaluated at policy time: conftest only reads deny and warn
+# out of package main.
 package lib.r2
 
 import data.lib.hcl
@@ -14,62 +16,55 @@ import rego.v1
 host_suffix := ".r2.cloudflarestorage.com"
 
 # Every s3 backend in the repository, R2 or not, keyed by root directory.
-s3_backends[d] contains body if {
-	some file in input
-	d := hcl.directory(file.path)
-	some block in object.get(file.contents, "terraform", [])
-	some body in object.get(object.get(block, "backend", {}), "s3", [])
+s3_backends[entry.directory] contains body if {
+	some entry in hcl.terraform_blocks
+	some body in object.get(object.get(entry.block, "backend", {}), "s3", [])
 }
 
 # `endpoints = { s3 = "..." }` is the documented spelling; hcl.blocks also
 # accepts the `endpoints { s3 = "..." }` block form.
-endpoints[d] contains url if {
-	some d, bodies in s3_backends
+endpoints[directory] contains url if {
+	some directory, bodies in s3_backends
 	some body in bodies
-	some e in hcl.blocks(object.get(body, "endpoints", null))
-	url := e.s3
+	some endpoint_block in hcl.blocks(object.get(body, "endpoints", null))
+	url := endpoint_block.s3
 	is_string(url)
 }
 
 # The single-endpoint attribute the s3 backend still accepts.
-endpoints[d] contains url if {
-	some d, bodies in s3_backends
+endpoints[directory] contains url if {
+	some directory, bodies in s3_backends
 	some body in bodies
 	url := body.endpoint
 	is_string(url)
 }
 
-r2_endpoints[d] contains url if {
-	some d, urls in endpoints
+# The endpoints served from the R2 account host, which is what marks a root as
+# R2 in the first place.
+account_endpoints[directory] contains url if {
+	some directory, urls in endpoints
 	some url in urls
 	contains(url, host_suffix)
 }
 
-roots contains d if {
-	some d, _ in r2_endpoints
+roots contains directory if {
+	some directory, _ in account_endpoints
 }
 
-backend_bodies[d] contains body if {
-	some d in roots
-	some body in hcl.set_for(s3_backends, d)
+backend_bodies[directory] contains body if {
+	some directory in roots
+	some body in hcl.set_for(s3_backends, directory)
 }
 
-# The files each root spells its backend out in. A rule about a root has no
-# file of its own to point at, because a root is a directory, so it borrows the
-# one the backend is declared in.
-backend_files[d] contains file.path if {
-	some file in input
-	d := hcl.directory(file.path)
-	some block in object.get(file.contents, "terraform", [])
-	some _ in object.get(object.get(block, "backend", {}), "s3", [])
+# The files each root spells its backend out in, for hcl.first_file to pick a
+# finding's anchor from.
+backend_files[entry.directory] contains entry.path if {
+	some entry in hcl.terraform_blocks
+	some _ in object.get(object.get(entry.block, "backend", {}), "s3", [])
 }
 
-# One file per root, chosen the same way every run: a finding that anchored to
-# each of them in turn would report the same problem several times over. Roots
-# that split the backend across files are the reason this has to pick rather
-# than iterate.
-backend_file(d) := min(hcl.set_for(backend_files, d))
+backend_file(directory) := hcl.first_file(backend_files, directory)
 
-resources_of_type(rtype) := hcl.resources_of_type(input, rtype)
+resources_of_type(resource_type) := hcl.resources_of_type(input, resource_type)
 
 buckets := resources_of_type("cloudflare_r2_bucket")

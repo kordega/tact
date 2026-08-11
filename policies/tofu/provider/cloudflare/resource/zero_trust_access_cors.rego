@@ -18,12 +18,12 @@ import rego.v1
 
 access_apps := hcl.resources_of_type(input, "cloudflare_zero_trust_access_application")
 
-deny contains hcl.finding(app.path, msg) if {
+deny contains hcl.finding(app.path, message) if {
 	some app in access_apps
 	some cors in hcl.blocks(object.get(app.body, "cors_headers", null))
-	object.get(cors, "allow_all_origins", null) == true
-	object.get(cors, "allow_credentials", null) == true
-	msg := sprintf(
+	cors.allow_all_origins == true
+	cors.allow_credentials == true
+	message := sprintf(
 		"%s: %s sets cors_headers with allow_all_origins and allow_credentials both true, which reflects any origin while forwarding credentials; name the allowed origins, or drop credentials",
 		[app.path, hcl.address(app)],
 	)

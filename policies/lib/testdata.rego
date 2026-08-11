@@ -1,6 +1,6 @@
-# Fixtures shared by the R2 unit tests. Every policy directory asserts on its
-# own rule, but they all need the same compliant starting point, so the builder
-# lives here instead of being copied eight times.
+# Fixtures shared by the policy unit tests. Every policy asserts on its own
+# rule, but they all need the same compliant starting point, so the builders
+# live here instead of being copied into every test file.
 #
 # Nothing here is evaluated at policy time: conftest only reads deny and warn
 # out of package main.
@@ -9,10 +9,10 @@ package lib.testdata
 import rego.v1
 
 # The fixtures below describe real roots, so the tofu/backend/encryption
-# policies see them too. Those policies warn
-# rather than deny, so they no longer reach a count(deny) == 0 assertion, but a
-# fixture without a valid encryption block would still put their warnings in
-# front of anyone reading a failing test.
+# policies see them too. Those policies warn rather than deny, so they no longer
+# reach a count(deny) == 0 assertion, but a fixture without a valid encryption
+# block would still put their warnings in front of anyone reading a failing
+# test.
 #
 # state and plan get their own key provider and method rather than sharing one:
 # they protect artifacts with different lifetimes, and the encryption policy
@@ -90,12 +90,21 @@ root_with(patch) := root(object.union(backend, patch))
 # The compliant backend with JSON pointers such as "/region" dropped.
 root_without(pointers) := root(json.remove(backend, pointers))
 
-# Fixtures for tofu/version-constraint. A root there needs a backend
-# to be read as a root at all, and the encryption block that comes with it
-# keeps the two encryption policies quiet, so that a warn set is only ever
+# Fixtures for tofu/versioning/version_constraint. A root there needs state
+# storage to be read as a root at all, and the encryption block that comes with
+# it keeps the two encryption policies quiet, so that a warn set is only ever
 # about provider versions.
 provider_root(required_providers) := encryption_root({
 	"backend": encryption_backend,
+	"encryption": [encryption],
+	"required_providers": [required_providers],
+})
+
+# The same root storing its state in the state_store{} block OpenTofu 1.11 added
+# beside backend{}. Either one makes the directory a root, and a root mistaken
+# for a module gets this policy's advice the wrong way round.
+provider_state_store_root(required_providers) := encryption_root({
+	"state_store": {"example": [{}]},
 	"encryption": [encryption],
 	"required_providers": [required_providers],
 })
@@ -114,8 +123,7 @@ provider(constraint) := {"cloudflare": {
 	"version": constraint,
 }}
 
-# An R2 bucket that passes every
-# tofu/provider/cloudflare/resource/r2/* policy.
+# An R2 bucket that passes every tofu/provider/cloudflare/resource/r2_* policy.
 bucket := {
 	"account_id": "${var.account_id}",
 	"name": "tofu-state",
@@ -125,14 +133,14 @@ bucket := {
 	"lifecycle": [{"prevent_destroy": true}],
 }
 
-resource_file(rtype, rname, body) := [{
+resource_file(resource_type, resource_name, body) := [{
 	"path": "roots/example/r2.tf",
-	"contents": {"resource": {rtype: {rname: [body]}}},
+	"contents": {"resource": {resource_type: {resource_name: [body]}}},
 }]
 
 bucket_file(body) := resource_file("cloudflare_r2_bucket", "state", body)
 
-# Fixtures for tofu/provider/cloudflare/resource/dns/dnssec. That policy pairs
+# Fixtures for tofu/provider/cloudflare/resource/dns_dnssec. That policy pairs
 # a zone with the resource signing it, so both have to be in the input, and the
 # pairing is by root, so both have to be in the same directory. There is no
 # backend here: a DNS root would have one, but adding it would put the two
@@ -173,12 +181,12 @@ bucket_with(patch) := bucket_file(object.union(bucket, patch))
 
 bucket_without(pointers) := bucket_file(json.remove(bucket, pointers))
 
-# Fixtures for tofu/provider/cloudflare/resource/zone/tls. In provider v5 each
+# Fixtures for tofu/provider/cloudflare/resource/zone_tls. In provider v5 each
 # zone setting is its own resource carrying one setting_id and its value, so a
 # fixture is a single such resource and each test names the pair it exercises.
 zone_setting(setting_id, value) := resource_file(
 	"cloudflare_zone_setting",
-	"s",
+	"example",
 	{
 		"zone_id": "${cloudflare_zone.example.id}",
 		"setting_id": setting_id,
@@ -186,7 +194,7 @@ zone_setting(setting_id, value) := resource_file(
 	},
 )
 
-# Fixtures for tofu/provider/cloudflare/resource/api-token/scope. A token holds
+# Fixtures for tofu/provider/cloudflare/resource/api_token_scope. A token holds
 # a list of policy statements; the tests vary one statement's effect and the
 # resources map it grants.
 api_token(effect, resources) := resource_file(
@@ -202,7 +210,7 @@ api_token(effect, resources) := resource_file(
 	},
 )
 
-# Fixtures for tofu/provider/cloudflare/resource/zero-trust/access-open. An
+# Fixtures for tofu/provider/cloudflare/resource/zero_trust_access_open. An
 # access policy admits whoever its include matchers name; the compliant base
 # admits one email domain, and each test merges a patch that breaks one thing.
 access_policy_base := {
@@ -211,11 +219,11 @@ access_policy_base := {
 	"include": [{"email_domain": {"domain": "example.com"}}],
 }
 
-access_policy(body) := resource_file("cloudflare_zero_trust_access_policy", "p", body)
+access_policy(body) := resource_file("cloudflare_zero_trust_access_policy", "example", body)
 
 access_policy_with(patch) := access_policy(object.union(access_policy_base, patch))
 
-# Fixtures for tofu/provider/cloudflare/resource/zero-trust/access-cors. The
+# Fixtures for tofu/provider/cloudflare/resource/zero_trust_access_cors. The
 # tests vary the cors_headers object on an access application.
 access_app_cors(cors) := resource_file(
 	"cloudflare_zero_trust_access_application",
@@ -227,7 +235,7 @@ access_app_cors(cors) := resource_file(
 	},
 )
 
-# Fixtures for tofu/provider/cloudflare/resource/dns/spf. That policy reads the
+# Fixtures for tofu/provider/cloudflare/resource/dns_spf. That policy reads the
 # content of TXT records, so the base is one cloudflare_dns_record and each test
 # supplies the content string it exercises. dns_record takes a whole body so the
 # non-TXT and unresolved cases can vary type and content too.
