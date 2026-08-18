@@ -311,7 +311,7 @@ jobs:
           exit 1
 
       - name: Send workflow telemetry
-        uses: paper2/github-actions-opentelemetry@f7ea8331cf2167431503ed5b0218299d09c19986 # v0.10.2
+        uses: paper2/github-actions-opentelemetry@78864c8924bb6f6507a2a5b1ed264697404588ca # v1.0.0
         env:
           OTEL_SERVICE_NAME: ${{ inputs.workflow-telemetry-service-name }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ inputs.workflow-telemetry-endpoint }}
